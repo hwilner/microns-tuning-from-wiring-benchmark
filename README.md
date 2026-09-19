@@ -15,20 +15,26 @@ This is **Paper 1** of the MICrONS function-from-wiring series (4 papers). It is
 | GNN/graph-transformer tuning prediction (orientation, direction, RF) | Benchmark leaderboard with uncertainty. |
 | Fixed public splits and evaluation harness | Reusable benchmark adopted by Papers 2–4. |
 
-**Current status:** planning stage; MICrONS data are openly available (microns-explorer.org); no experiments have been run.
+**Current status:** benchmark software and synthetic-data tests implemented; MICrONS data are openly available (microns-explorer.org); real-connectome runs pending dataset assembly (see backlog issues).
 
 ## What is included
 
 | Path | Contents |
 |---|---|
-| `src/` | Graph construction, baseline features, and GNN utilities. |
-| `tests/` | Synthetic graph tests. |
-| `docs/` | Research status, methods scope, and contribution guidance. |
+| `src/wiring_tuning/graphs.py` | Connectome graph representation (neurons as nodes with cell-type features, synapses as weighted directed edges) and subgraph sampling. |
+| `src/wiring_tuning/simulate.py` | Synthetic connectome generator with a planted tuning-from-wiring signal (like-to-like wiring), plus a degree-preserving rewiring null. |
+| `src/wiring_tuning/models.py` | Pure-PyTorch message-passing GNN regressor and baselines (features-only MLP, degree/E-I-balance MLP, mean null). |
+| `src/wiring_tuning/train.py` | Training loop with node-level train/val/test masks and R² / Pearson metrics. |
+| `src/wiring_tuning/benchmark.py` | Benchmark runner producing a results table across models and seeds (`python -m wiring_tuning.benchmark`). |
+| `tests/` | Synthetic graph tests: GNN beats the null on planted structure, collapses on rewired nulls; all fast, CPU-only, data-free. |
+| `docs/` | Research status, methods scope, data-access notes, and contribution guidance. |
 
 ## Use and validation
 
 ```bash
+pip install -e ".[dev]"
 python -m pytest -q
+python -m wiring_tuning.benchmark
 ```
 
 ## Keywords
@@ -38,3 +44,5 @@ MICrONS, connectomics, graph neural networks, visual cortex, calcium imaging, st
 ## Documentation
 
 - [Introduction for new readers](docs/INTRODUCTION.md)
+- [MICrONS data access](docs/DATA_ACCESS.md)
+- [Contributing](CONTRIBUTING.md)
