@@ -1,0 +1,41 @@
+{
+  "source": {
+    "name": "MICrONS functional connectomics release (Ding et al. 2025)",
+    "doi": "10.1038/s41586-025-08840-3",
+    "base_url": "https://bossdb-open-data.s3.amazonaws.com/iarpa_microns/minnie/functional_data/functional_connectomics/node_and_edge_properties/v1",
+    "files": {
+      "node_data_v1.pkl": "5a310585ccefcfb2f14d15b2cc2e607e730b0ec0a86587e606af362463abf6ef",
+      "edge_data_v1.pkl": "efcd387233960026464f285597fd5bc1c3a00432e4d62570bc578149a9707bbb"
+    }
+  },
+  "n_nodes_raw": 12894,
+  "n_edges_raw": 1693276,
+  "n_nodes": 12894,
+  "n_edges": 8128,
+  "min_synapses": 1,
+  "cc_norm_min": 0.0,
+  "labels": [
+    "gosi",
+    "osi",
+    "pref_ori",
+    "gosi_invivo",
+    "osi_invivo",
+    "pref_ori_invivo"
+  ],
+  "qc": {
+    "cc_norm_cvt_median": 0.6608751316041606,
+    "frac_nodes_with_gosi": 1.0,
+    "brain_areas": [
+      "AL",
+      "LM",
+      "RL",
+      "V1"
+    ],
+    "layers": [
+      "L2/3",
+      "L4",
+      "L5"
+    ]
+  },
+  "split_seed": 0
+}
