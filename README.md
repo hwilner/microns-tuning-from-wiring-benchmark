@@ -55,6 +55,8 @@ MICrONS, connectomics, graph neural networks, visual cortex, calcium imaging, st
 ## Documentation
 
 - [Introduction for new readers](docs/INTRODUCTION.md)
+- [Extended introduction (zero background assumed)](docs/EXTENDED_INTRODUCTION.md)
+- [Methods and design decisions](docs/METHODS.md)
 - [MICrONS data access](docs/DATA_ACCESS.md)
 - [Analysis plan](docs/ANALYSIS_PLAN.md)
 - [Data spec](data/README.md)
