@@ -1,8 +1,9 @@
 # Data spec — MICrONS tuning-from-wiring dataset
 
 **Nothing large is committed to git.** This directory contains the dataset
-*specification*, fixed splits (IDs only), checksums, and a small sample.
-The full dataset is rebuilt deterministically by the loader:
+*specification*, checksums, a small sample, and a split spot-check.
+The full dataset (including the fixed splits) is rebuilt deterministically
+by the loader:
 
 ```bash
 python - <<'EOF'
@@ -10,6 +11,10 @@ from wiring_tuning.microns import assemble_dataset
 assemble_dataset("data", min_synapses=1, seed=0)   # downloads ~500 MB once
 EOF
 ```
+
+Because the source files are SHA-256-pinned and the split permutation uses a
+fixed seed (0), `data/processed/splits.json` is bit-identical on every
+rebuild — this pins the splits more strongly than committing an ID list.
 
 ## Source (anonymous, no token required)
 
@@ -51,8 +56,8 @@ set env var `CAVE_TOKEN` (or repo secret `CAVE_TOKEN` for CI).
 | Path | Contents |
 |---|---|
 | `manifest.json` | source URLs, SHA-256 checksums, row counts, QC stats, split seed |
-| `splits.csv` | fixed train/val/test assignment, nucleus IDs only |
-| `sample_nodes.csv` | 200-row sample of the assembled node table (metadata + labels) |
+| `splits_preview.csv` | first 100 nucleus IDs of each split (spot-check); the full 60/20/20 split is deterministic via `assemble_dataset(..., seed=0)` on the checksummed source |
+| `sample_nodes.csv` | 50-row sample of the assembled node table (metadata + labels) |
 
 Processed artifacts (`data/processed/graph.npz`, `labels.npz`, `nodes.csv`,
 `splits.json`) are git-ignored build products of `assemble_dataset`.
