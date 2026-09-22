@@ -38,6 +38,14 @@ Visual-cortex neurons are picky: each responds most strongly to a particular pat
 
 This repository predicts three tuning properties per neuron [5]: `gosi` (global orientation selectivity), `osi` (orientation selectivity), and `pref_ori` (preferred orientation, encoded as `cos(2·θ)` because orientation repeats every 180°).
 
+### The many roads to visual tuning
+
+Tuning — "this neuron prefers vertical bars" — has several independent formal faces.
+
+**Road 1: geometry (a preference is a point).** Because orientation repeats every 180°, this repo encodes preferred orientation as cos(2·θ): an angle becomes a *coordinate*. Draw a circle; horizontal preference is the point (1, 0), 45° is (0, 1) in doubled-angle coordinates, vertical is (−1, 0). "Two neurons like similar stimuli" becomes "their points are close together". *Worked example:* θ = 0° gives cos(0) = 1, the point (1, 0); θ = 90° gives cos(180°) = −1, the point (−1, 0); the distance between these opposite preferences is 2 — the diameter of the circle, i.e. maximal disagreement, exactly as it should be. *What this road buys you:* similarity, averaging, and prediction error become distances you can see. *What it costs you:* one coordinate pair captures only orientation; richer tuning (color, motion direction, natural scenes) needs more dimensions, and the pictures stop being drawable.
+
+**Road 2: probability as frequencies (tuning is a table of counts).** Forget curves: show the neuron 4 stimuli (0°, 45°, 90°, 135°), 10 trials each, and count strong responses. *Worked example:* neuron A responds strongly in 9, 3, 1, 3 of the 10 trials per stimulus. Its tuning *is* the row of counts (9, 3, 1, 3); its preferred orientation is the biggest column (0°), and "selectivity" is how lopsided the row is: best count 9 versus average of the rest (3+1+3)/3 ≈ 2.3, a ratio of about 4 to 1 — strongly selective. A row of (4, 4, 4, 4) is ratio 1 — no selectivity at all. *What this road buys you:* tuning becomes arithmetic on counts — no curve fitting, no assumptions, every step checkable. *What it costs you:* with few trials the counts are noisy (9 out of 10 can happen by luck), so this road must borrow error bars from statistics before it can claim anything.
+
 ## 6. The big question
 
 > **Can you predict what a neuron *does* from only *who it is wired to*?**
@@ -58,6 +66,16 @@ The jargon is just renaming what you drew:
 
 This repo's `ConnectomeGraph` is this napkin drawing at scale: an edge list, edge weights, and per-node features (position, brain area, layer) [9]. "Graph theory" for our purposes is mostly the skill of counting arrows on the napkin.
 
+### The many roads to the connectome
+
+One object — the wiring diagram — can be entered through several doors. Pick whichever matches your habits; they all describe the same napkin.
+
+**Road 1: graph theory (nodes and edges).** The connectome is a directed, weighted graph: a set of nodes and a set of arrows with numbers on them. Everything in this series is built from three graph operations you can do on the napkin: count arrows into a node (in-degree), follow a chain of arrows (a path), and list a node's arrow-neighbors (its neighborhood). *Worked example:* on our napkin, C has in-degree 2 (from A and B), there is exactly one path from A to D (A → C → D, total weight passing through edges 3 and 5), and D's incoming neighborhood is just {C}. *What this road buys you:* the native language of connectomics — null models, motifs, and message passing are all statements about arrows. *What it costs you:* the graph throws away geometry; two neurons can be graph-neighbors while sitting millimeters apart.
+
+**Road 2: set theory (membership and constraints).** The same napkin is two sets and a table: a node set V = {A, B, C, D} and an edge set E = {(A,C), (B,C), (C,D)}, plus a weight table w with w(A,C) = 3, w(B,C) = 1, w(C,D) = 5. Asking "is A wired to D?" is the membership test (A,D) ∈ E, which fails. A subgraph is just a subset; the coregistered graph of Paper 1 is the subset of MICrONS edges where *both* endpoints were also recorded — a constraint expressed purely as set intersection. *What this road buys you:* precision — every claim ("the null preserves degree") becomes a checkable statement about sets and counts. *What it costs you:* sets have no built-in notion of "influence flowing", so dynamics have to be added by hand.
+
+**Road 3: category-flavored composition (arrows that compose).** Read each arrow as "has a direct line to". Arrows *compose*: A → C and C → D give a composite path A ⇢ D, and the napkin's whole meaning is which composites exist. A motif (say, a feedforward triplet A → B, B → C, A → C) is then a small diagram in which two roads — the direct arrow and the two-step composite — share start and destination; Papers 2 and 4 lean hard on counting such diagrams. *Worked example:* our napkin has two composites of length 2 (A ⇢ D via C, and B ⇢ D via C) and none of length 3, so "news from A reaches D in exactly 2 hops" is a pure composition count. *What this road buys you:* paths and motifs become the primitive objects, which is exactly what interpretability needs. *What it costs you:* weights and probabilities fit awkwardly; it is a qualitative skeleton, not a quantitative model.
+
 ## 8. A graph neural network = gossip on the napkin
 
 Now the learning model. We want to predict D's tuning without being told it. All we have is the wiring. The idea, called **message passing**, is gossip:
@@ -75,6 +93,26 @@ h_i ← ReLU( W_upd [ h_i ‖ Σ_j  w_ji · W_msg h_j ] )
 ```
 
 **Word-by-word:** `h_i` is neuron i's note card; `w_ji` is the arrow weight from j to i (the "3" on A → C); `Σ_j` means "add up over all neurons j that point into i" (the gossip collection); `W_msg` and `W_upd` are the learned mixing recipes; `‖` means "place two lists side by side"; ReLU is the keep-the-positives rule. In one sentence: *each neuron's new card is a learned mixture of its old card and the weighted sum of incoming neighbors' cards.* For the intuition behind learned weights and nonlinearities, see 3Blue1Brown's neural-network series (https://www.3blue1brown.com/topics/neural-networks) and StatQuest (https://statquest.org/video-index/).
+
+### The many roads to message passing
+
+The gossip update above is the official description, but the same computation has at least three independent faces.
+
+**Road 1: linear algebra as a weight table.** Write the napkin as a table T where row = receiver, column = sender, and the cell holds the arrow weight:
+
+```
+        sender:  A   B   C   D
+receiver A       0   0   0   0
+         B       0   0   0   0
+         C       3   1   0   0
+         D       0   0   5   0
+```
+
+One gossip round is "each row takes a weighted sum of the senders' cards". *Worked example:* if every card is the single number 1 (A=B=C=D=1), then C's incoming sum is 3·1 + 1·1 = 4 and D's is 5·1 = 5 — read straight off the C and D rows. A second round is the same table applied to the new cards: D now receives 5·(C's new card). "Matrix multiplication" is nothing more than doing every row of this table at once. *What this road buys you:* the whole GNN becomes table arithmetic a spreadsheet can check, and two rounds = apply the table twice. *What it costs you:* the table for half a billion synapses is mostly zeros; the table view hides how sparse the real thing is, which is Paper 4's whole problem.
+
+**Road 2: discrete iterated maps (tomorrow = f(today)).** Think of the cards as a state that advances in clock ticks: card(t+1) = mix(card(t), neighbors' cards(t)). No calculus anywhere — just a rule applied over and over. *Worked example:* give A, B, C, D starting cards 1, 0, 0, 0 and use the rule "each neuron with incoming arrows replaces its card by the weighted sum of incoming cards (weights from the napkin); neurons without incoming arrows keep their card". Then t=0: (1,0,0,0); t=1: (1,0,3,0) because C computes 3·1 + 1·0; t=2: (1,0,3,15) because C recomputes the same 3 and D computes 5·3. News of A reaches D at t=2 — you watched the signal travel. Stability questions ("does the state settle?") become: does iterating the table stop changing the cards? *What this road buys you:* training-free simulation — you can trace *exactly* which round carries whose influence, which is what attribution in Paper 2 formalizes. *What it costs you:* the learned recipes W_msg, W_upd enter as black-box tables here; this road explains the mechanics, not the learning.
+
+**Road 3: information theory by counting.** Ask: how many yes/no questions does one gossip round answer about "where did D's card come from"? Before gossip, D's card could have been influenced by any of 4 nodes — log2(4) = 2 questions of uncertainty. After one round you know only C's arrow touches D, so the influence came from a set of size 1: 2 − log2(1) = 2 questions answered, i.e. the wiring told you 2 bits about the source of D's update. On the real sparse graph (1.3 edges per neuron) a neuron "collects news" from barely more than one partner, so the wiring answers close to zero questions per neuron — which is the information-theoretic way to state Paper 1's negative result. *What this road buys you:* a unit of measurement (bits/questions) for "how much the wiring could possibly tell you", comparable across graphs. *What it costs you:* counting questions assumes influences are distinct and independent; correlated neighbors make the real number smaller than the count suggests.
 
 ### How the recipes get learned (training, in one paragraph)
 
@@ -128,6 +166,16 @@ Suppose the true `osi` values of our four neurons are A: 0.5, B: 0.1, C: 0.3, D:
 - **Train/validation/test split:** hide some napkin neurons from the model. We fit recipes on 60% of neurons (train), use 20% to decide when to stop knob-turning (validation), and report scores only on a final untouched 20% (test) — estimating performance on neurons never seen. The split is by nucleus ID and fixed forever in `data/splits.csv` [5].
 - **Null graphs (the honesty control):** redraw the napkin keeping each neuron's number of arrows but shuffling *who* points to *whom* (a "degree-preserving rewire"). If the model's score doesn't drop, it wasn't using the actual wiring — just arrow counts.
 
+### The many roads to measuring success
+
+"Did the model do well?" is one question with several honest ways to formalize it.
+
+**Road 1: probability as frequencies (counting wins and losses).** Line up the napkin neurons and score each prediction as hit or miss against a tolerance. *Worked example:* truths 0.5, 0.1, 0.3, 0.9; predictions 0.4, 0.2, 0.3, 0.8. With tolerance 0.15, every prediction is within 0.1 of the truth: 4 hits out of 4. A lazy predictor that always guesses the mean 0.45 scores errors 0.05, 0.35, 0.15, 0.45 — only 2 hits out of 4. "The model beats the baseline" is now the count statement 4/4 > 2/4, and R² is the same idea with squared errors instead of hit counts: model squared errors 0.01+0.01+0+0.01 = 0.03 versus lazy 0.0025+0.1225+0.0225+0.2025 = 0.35, so R² = 1 − 0.03/0.35 ≈ 0.91 on this toy napkin. *What this road buys you:* every metric is a fraction of counts you can audit by hand. *What it costs you:* fractions on 4 neurons mean little; this road needs many test neurons before the counts stabilize.
+
+**Road 2: information theory by counting (the null as a question budget).** The degree-preserving null asks: how much does *who* points to *whom* tell you, beyond *how many* arrows each neuron has? *Worked example:* on the napkin, C's in-degree is 2. If you only know "C has 2 inputs among {A, B, D}", there are 3 possible input sets ({A,B}, {A,D}, {B,D}) — log2(3) ≈ 1.6 questions of uncertainty. Learning the true wiring {A, B} answers those 1.6 questions. If the GNN's score does not drop when that 1.6-bit answer is scrambled, the model never used it — the null test in one sentence. *What this road buys you:* "the wiring carries no extra information" becomes a countable claim, not a vibe. *What it costs you:* real nulls preserve more than degree (cell types, spatial layout), and each extra constraint shrinks the question budget in ways that are hard to count exactly.
+
+**Road 3: set theory (the split as disjoint subsets).** Train/validation/test is purely set bookkeeping: partition the neurons into three disjoint subsets — 60% for fitting recipes, 20% for deciding when to stop, 20% never touched until the final score. *Worked example:* with 10 neurons, that is {6 train} ∪ {2 validation} ∪ {2 test}, pairwise disjoint, union = all 10. "No leakage" means exactly: the intersection of train and test is the empty set. *What this road buys you:* the single most common way benchmarks lie (test data seeping into training) becomes a set identity anyone can check in `data/splits.csv`. *What it costs you:* disjointness of neurons does not guarantee disjointness of *information* — two test neurons wired to train neurons are not fully independent, which is why the null graphs of Road 2 still matter.
+
 ## 10. The negative result — honestly, and why it matters
 
 What actually happened on real data [5,11]:
@@ -151,6 +199,10 @@ python -m wiring_tuning.harness --check    # verifies the committed numbers
 Everything downloads automatically (~500 MB once, no account needed) [9,11].
 
 ---
+
+## Choosing your road
+
+Every core idea in this document was presented through several independent doors, and you only need one per idea. If you think in drawings of dots and arrows, take the graph-theory road throughout. If you think in spreadsheets and tables, take the weight-table road for message passing and the frequency road for tuning and metrics. If you think in code, take the discrete iterated map road — a GNN layer is a loop you can write in ten lines. If you think in sets and constraints, the connectome-as-sets and split-as-partition roads will feel like home. If you think in questions and answers, take the information-by-counting roads — they state both the benchmark's honesty controls and its negative result in the cleanest units. And if you think in pictures, the geometry road turns tuning into points on a circle. The roads meet at the same destination: Paper 1's claim that, at ~1.3 edges per neuron, wiring alone does not yet predict tuning — with the tools to check that claim yourself, whichever road you took to get there.
 
 ## References
 
