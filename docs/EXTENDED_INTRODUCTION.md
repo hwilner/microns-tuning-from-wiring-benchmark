@@ -124,7 +124,7 @@ Start with random recipes. For each training neuron, the model makes a predictio
 flowchart LR
     A[Electron microscopy<br/>~523M synapses] --> B[Coregistration:<br/>12,894 neurons with<br/>2-photon recordings]
     B --> C[Graph: 8,128 connected<br/>edges, weight = synapse count]
-    C --> D[GNN gossip rounds<br/>2 layers, hidden 64]
+    C --> D[GNN gossip rounds<br/>2 layers, hidden 64<br/>64 internal numbers per layer,<br/>not directly observed]
     E[Node note cards:<br/>position, area, layer] --> D
     D --> F[Predicted tuning:<br/>gosi / osi / pref_ori]
     G[Measured tuning<br/>labels] --> H{R², Pearson<br/>on held-out test set}
@@ -186,7 +186,7 @@ What actually happened on real data [5,11]:
 
 In plain language: at this sparsity, *who* a neuron is wired to carries no measurable extra information beyond *where* it sits. With ~1.3 gossip partners per neuron, there is almost nothing to gossip about.
 
-**Why this is valuable, not a failure.** Science advances by quantifying effects, including zero effects. This benchmark establishes reproducibly, with pre-registered metrics [5], that (i) the sparse coregistered graph alone is insufficient, and (ii) any future claim of "wiring predicts tuning" must beat these baselines and these nulls. It also points at the fix: the **full proofread EM graph** via the CAVE interface (free token; see `docs/DATA_ACCESS.md`), where each neuron has hundreds of partners — scaled up in **Paper 4**. A negative result with a hard benchmark and a clear path forward is the foundation the series stands on.
+**Why this is valuable, not a failure.** Science advances by quantifying effects, including zero effects. This benchmark establishes reproducibly, with pre-registered metrics [5] — the analysis plan was written down and locked before looking at the results, so the test cannot be quietly adjusted afterward — that (i) the sparse coregistered graph alone is insufficient, and (ii) any future claim of "wiring predicts tuning" must beat these baselines and these nulls. It also points at the fix: the **full proofread EM graph** via the CAVE interface (free token; see `docs/DATA_ACCESS.md`), where each neuron has hundreds of partners — scaled up in **Paper 4**. A negative result with a hard benchmark and a clear path forward is the foundation the series stands on.
 
 ## 11. Try it yourself
 
