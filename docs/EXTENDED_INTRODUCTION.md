@@ -12,18 +12,18 @@
 
 Every symbol used later in this document is defined here in plain words, with a tiny numeric example. Nothing below assumes any math background — if you can add and multiply, you can check every line. Come back whenever a symbol looks unfamiliar.
 
-- **Vector.** A vector is just a short list of numbers, kept in a fixed order, written like $(3, 1)$. A neuron's "note card" in this series is a vector. *Example:* (3, 1) might mean "3 convergence motifs, 1 triplet".
-- **Matrix.** A matrix is a table of numbers with rows and columns — a spreadsheet. $M = \begin{pmatrix} 0 & 3 \\ 1 & 0 \end{pmatrix}$ has 2 rows and 2 columns. Multiplying a matrix by a vector means "compute one weighted sum per row".
-- **Sum (Σ).** The symbol $\sum$ means "add these up": $\sum_{j} w_j$ with weights $w = (3, 1, 5)$ is $3 + 1 + 5 = 9$. The little letter under the Σ just names what you are adding over.
-- **Weighted sum.** Multiply each item by its importance, then add: $3 \cdot 1 + 1 \cdot 1 = 4$ is the weighted sum of two identical cards with weights 3 and 1. This is the single most common computation in this document.
-- **Probability (as a fraction).** A probability is a count divided by a total, always between 0 and 1. *Example:* 9 hits out of 20 neurons is the probability estimate $9/20 = 0.45$.
-- **Expectation (average).** The expectation, written $\mathbb{E}[x]$ or $\bar{x}$, is the ordinary average: add everything, divide by the count. *Example:* the average of (0.5, 0.1, 0.3, 0.9) is $1.8/4 = 0.45$.
-- **Logarithm base 2 (log₂) and bits.** $\log_2(n)$ answers "how many yes/no questions to pin down one choice among $n$ equally likely options": $\log_2(8) = 3$, because $2^3 = 8$. **Entropy** is the average number of such questions a random quantity carries: $H = -\sum_i p_i \log_2 p_i$; a fair coin has $H = 1$ bit.
-- **Graph.** A graph $G = (V, E)$ is a set of dots (nodes $V$) plus a set of arrows (edges $E$), optionally with numbers (weights) on the arrows. *Example:* $V = \{A, B, C\}$, $E = \{A \to C,\, B \to C\}$ with weights 3 and 1 is a tiny wiring diagram.
-- **Dot product.** Multiply two vectors position by position and add the results: $(3, 1) \cdot (2, 4) = 3 \cdot 2 + 1 \cdot 4 = 10$. It measures how much two vectors "point the same way".
-- **Cosine similarity.** The dot product divided by the vector lengths, $\cos\theta = \frac{u \cdot v}{\lVert u \rVert \, \lVert v \rVert}$, giving a number from −1 (opposite) to +1 (same direction). *Example:* for $u = (1, 0)$ and $v = (1, 1)$, $\cos\theta = 1/\sqrt{2} \approx 0.71$.
-- **R² (coefficient of determination).** $R^2 = 1 - \frac{\text{model's squared errors}}{\text{squared errors of always guessing the average}}$. *Example:* model errors 0.03 vs. lazy errors 0.35 gives $R^2 = 1 - 0.03/0.35 \approx 0.91$; 0 means "no better than guessing the average".
-- **Pearson correlation (r).** A number from −1 to +1 measuring whether two lists of numbers rise and fall together, ignoring their scale. *Example:* predictions (0.4, 0.2, 0.3, 0.8) and truths (0.5, 0.1, 0.3, 0.9) rise together, so $r$ is near +1.
+- **Vector.** A vector is just a short list of numbers, kept in a fixed order, written like $`(3, 1)`$. A neuron's "note card" in this series is a vector. *Example:* (3, 1) might mean "3 convergence motifs, 1 triplet".
+- **Matrix.** A matrix is a table of numbers with rows and columns — a spreadsheet. $`M = \begin{pmatrix} 0 & 3 \\ 1 & 0 \end{pmatrix}`$ has 2 rows and 2 columns. Multiplying a matrix by a vector means "compute one weighted sum per row".
+- **Sum (Σ).** The symbol $`\sum`$ means "add these up": $`\sum_{j} w_j`$ with weights $`w = (3, 1, 5)`$ is $`3 + 1 + 5 = 9`$. The little letter under the Σ just names what you are adding over.
+- **Weighted sum.** Multiply each item by its importance, then add: $`3 \cdot 1 + 1 \cdot 1 = 4`$ is the weighted sum of two identical cards with weights 3 and 1. This is the single most common computation in this document.
+- **Probability (as a fraction).** A probability is a count divided by a total, always between 0 and 1. *Example:* 9 hits out of 20 neurons is the probability estimate $`9/20 = 0.45`$.
+- **Expectation (average).** The expectation, written $`\mathbb{E}[x]`$ or $`\bar{x}`$, is the ordinary average: add everything, divide by the count. *Example:* the average of (0.5, 0.1, 0.3, 0.9) is $`1.8/4 = 0.45`$.
+- **Logarithm base 2 (log₂) and bits.** $`\log_2(n)`$ answers "how many yes/no questions to pin down one choice among $`n`$ equally likely options": $`\log_2(8) = 3`$, because $`2^3 = 8`$. **Entropy** is the average number of such questions a random quantity carries: $`H = -\sum_i p_i \log_2 p_i`$; a fair coin has $`H = 1`$ bit.
+- **Graph.** A graph $`G = (V, E)`$ is a set of dots (nodes $`V`$) plus a set of arrows (edges $`E`$), optionally with numbers (weights) on the arrows. *Example:* $`V = \{A, B, C\}`$, $`E = \{A \to C,\, B \to C\}`$ with weights 3 and 1 is a tiny wiring diagram.
+- **Dot product.** Multiply two vectors position by position and add the results: $`(3, 1) \cdot (2, 4) = 3 \cdot 2 + 1 \cdot 4 = 10`$. It measures how much two vectors "point the same way".
+- **Cosine similarity.** The dot product divided by the vector lengths, $`\cos\theta = \frac{u \cdot v}{\lVert u \rVert \, \lVert v \rVert}`$, giving a number from −1 (opposite) to +1 (same direction). *Example:* for $`u = (1, 0)`$ and $`v = (1, 1)`$, $`\cos\theta = 1/\sqrt{2} \approx 0.71`$.
+- **R² (coefficient of determination).** $`R^2 = 1 - \frac{\text{model's squared errors}}{\text{squared errors of always guessing the average}}`$. *Example:* model errors 0.03 vs. lazy errors 0.35 gives $`R^2 = 1 - 0.03/0.35 \approx 0.91`$; 0 means "no better than guessing the average".
+- **Pearson correlation (r).** A number from −1 to +1 measuring whether two lists of numbers rise and fall together, ignoring their scale. *Example:* predictions (0.4, 0.2, 0.3, 0.8) and truths (0.5, 0.1, 0.3, 0.9) rise together, so $`r`$ is near +1.
 
 ---
 
@@ -61,7 +61,9 @@ Tuning — "this neuron prefers vertical bars" — has several independent forma
 
 **Road 1: geometry (a preference is a point).** Because orientation repeats every 180°, this repo encodes preferred orientation as cos(2·θ): an angle becomes a *coordinate*. Draw a circle; horizontal preference is the point (1, 0), 45° is (0, 1) in doubled-angle coordinates, vertical is (−1, 0). "Two neurons like similar stimuli" becomes "their points are close together". *Worked example:* θ = 0° gives cos(0) = 1, the point (1, 0); θ = 90° gives cos(180°) = −1, the point (−1, 0); the distance between these opposite preferences is 2 — the diameter of the circle, i.e. maximal disagreement, exactly as it should be. In symbols, the encoding is
 
-$$x = \cos(2\theta), \qquad \theta = 0^\circ \Rightarrow x = 1, \quad \theta = 90^\circ \Rightarrow x = -1,$$
+```math
+x = \cos(2\theta), \qquad \theta = 0^\circ \Rightarrow x = 1, \quad \theta = 90^\circ \Rightarrow x = -1,
+```
 
 — the same two numbers computed above. *What this road buys you:* similarity, averaging, and prediction error become distances you can see. *What it costs you:* one coordinate pair captures only orientation; richer tuning (color, motion direction, natural scenes) needs more dimensions, and the pictures stop being drawable.
 
@@ -115,9 +117,11 @@ h_i ← ReLU( W_upd [ h_i ‖ Σ_j  w_ji · W_msg h_j ] )
 
 The same rule in rendered math (GitHub renders LaTeX), identical to the code line above:
 
-$$h_i \leftarrow \mathrm{ReLU}\!\left(W_{upd}\,\big[h_i \,\Vert\, \textstyle\sum_{j} w_{ji}\, W_{msg}\, h_j\big]\right)$$
+```math
+h_i \leftarrow \mathrm{ReLU}\!\left(W_{upd}\,\big[h_i \,\Vert\, \textstyle\sum_{j} w_{ji}\, W_{msg}\, h_j\big]\right)
+```
 
-*Tiny-number check:* with card value 1 for every neuron and napkin weights 3 and 1 into C, the sum inside the brackets is $3 \cdot 1 + 1 \cdot 1 = 4$ — exactly the arithmetic worked out in Road 1 below.
+*Tiny-number check:* with card value 1 for every neuron and napkin weights 3 and 1 into C, the sum inside the brackets is $`3 \cdot 1 + 1 \cdot 1 = 4`$ — exactly the arithmetic worked out in Road 1 below.
 
 **Word-by-word:** `h_i` is neuron i's note card; `w_ji` is the arrow weight from j to i (the "3" on A → C); `Σ_j` means "add up over all neurons j that point into i" (the gossip collection); `W_msg` and `W_upd` are the learned mixing recipes; `‖` means "place two lists side by side"; ReLU is the keep-the-positives rule. In one sentence: *each neuron's new card is a learned mixture of its old card and the weighted sum of incoming neighbors' cards.* For the intuition behind learned weights and nonlinearities, see 3Blue1Brown's neural-network series (https://www.3blue1brown.com/topics/neural-networks) and StatQuest (https://statquest.org/video-index/).
 
@@ -188,16 +192,20 @@ flowchart TB
 
 Suppose the true `osi` values of our four neurons are A: 0.5, B: 0.1, C: 0.3, D: 0.9, and a model predicts 0.4, 0.2, 0.3, 0.8.
 
-- **R² (coefficient of determination):** compare the model's errors against the errors of a lazy predictor that always guesses the average (0.45). If the model's squared errors are 40% smaller, R² = 0.4. R² = 1 is perfect, 0 means "no better than the average", and it *can be negative* if the model is worse than lazy. In symbols, for truths $y_i$, predictions $\hat{y}_i$, and mean $\bar{y}$:
+- **R² (coefficient of determination):** compare the model's errors against the errors of a lazy predictor that always guesses the average (0.45). If the model's squared errors are 40% smaller, R² = 0.4. R² = 1 is perfect, 0 means "no better than the average", and it *can be negative* if the model is worse than lazy. In symbols, for truths $`y_i`$, predictions $`\hat{y}_i`$, and mean $`\bar{y}`$:
 
-$$R^2 = 1 - \frac{\sum_i (y_i - \hat{y}_i)^2}{\sum_i (y_i - \bar{y})^2}$$
+```math
+R^2 = 1 - \frac{\sum_i (y_i - \hat{y}_i)^2}{\sum_i (y_i - \bar{y})^2}
+```
 
-The napkin computation from Road 1 of this section: model squared errors $0.01 + 0.01 + 0 + 0.01 = 0.03$, lazy squared errors $0.35$, so $R^2 = 1 - 0.03/0.35 \approx 0.91$. Gentle intro: StatQuest's R² video (https://statquest.org/).
-- **Pearson correlation:** do predictions and truths *move together*? Here the prediction rises whenever the truth rises, so the correlation is high (+1 is perfect lockstep, −1 perfectly opposite, regardless of scale). In symbols, for paired lists $x$ (truths) and $y$ (predictions):
+The napkin computation from Road 1 of this section: model squared errors $`0.01 + 0.01 + 0 + 0.01 = 0.03`$, lazy squared errors $`0.35`$, so $`R^2 = 1 - 0.03/0.35 \approx 0.91`$. Gentle intro: StatQuest's R² video (https://statquest.org/).
+- **Pearson correlation:** do predictions and truths *move together*? Here the prediction rises whenever the truth rises, so the correlation is high (+1 is perfect lockstep, −1 perfectly opposite, regardless of scale). In symbols, for paired lists $`x`$ (truths) and $`y`$ (predictions):
 
-$$r = \frac{\sum_i (x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum_i (x_i - \bar{x})^2}\,\sqrt{\sum_i (y_i - \bar{y})^2}}$$
+```math
+r = \frac{\sum_i (x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum_i (x_i - \bar{x})^2}\,\sqrt{\sum_i (y_i - \bar{y})^2}}
+```
 
-Each term $(x_i - \bar{x})(y_i - \bar{y})$ is positive when truth and prediction are on the same side of their averages — which happens for all four napkin neurons here, hence the high $r$. Interactive intro: Seeing Theory (https://seeing-theory.brown.edu/).
+Each term $`(x_i - \bar{x})(y_i - \bar{y})`$ is positive when truth and prediction are on the same side of their averages — which happens for all four napkin neurons here, hence the high $`r`$. Interactive intro: Seeing Theory (https://seeing-theory.brown.edu/).
 - **Train/validation/test split:** hide some napkin neurons from the model. We fit recipes on 60% of neurons (train), use 20% to decide when to stop knob-turning (validation), and report scores only on a final untouched 20% (test) — estimating performance on neurons never seen. The split is by nucleus ID and fixed forever in `data/splits.csv` [5].
 - **Null graphs (the honesty control):** redraw the napkin keeping each neuron's number of arrows but shuffling *who* points to *whom* (a "degree-preserving rewire"). If the model's score doesn't drop, it wasn't using the actual wiring — just arrow counts.
 
@@ -252,12 +260,12 @@ Each link was checked to load and match the topic.
 - [StatQuest video index](https://statquest.org/video-index/) — short, friendly lessons including gradient descent, R-squared, and cosine similarity, all used in Sections 8–9.
 
 **R² and correlation**
-- [Coefficient of determination (Wikipedia)](https://en.wikipedia.org/wiki/Coefficient_of_determination) — the formal $R^2 = 1 - SS_{res}/SS_{tot}$ definition and the caveats (including negative values) behind Section 9.
-- [Pearson correlation coefficient (Wikipedia)](https://en.wikipedia.org/wiki/Pearson_correlation_coefficient) — the formula and geometric reading of $r$ used alongside R² in the leaderboard.
+- [Coefficient of determination (Wikipedia)](https://en.wikipedia.org/wiki/Coefficient_of_determination) — the formal $`R^2 = 1 - SS_{res}/SS_{tot}`$ definition and the caveats (including negative values) behind Section 9.
+- [Pearson correlation coefficient (Wikipedia)](https://en.wikipedia.org/wiki/Pearson_correlation_coefficient) — the formula and geometric reading of $`r`$ used alongside R² in the leaderboard.
 
 **Probability and information**
 - [Seeing Theory](https://seeing-theory.brown.edu/) — interactive chapters on probability, distributions, and regression that build the intuition behind our splits and metrics.
-- [Entropy (information theory) (Wikipedia)](https://en.wikipedia.org/wiki/Entropy_(information_theory)) — Shannon's $H = -\sum p \log_2 p$, the formal version of the "yes/no question budget" roads.
+- [Entropy (information theory) (Wikipedia)](https://en.wikipedia.org/wiki/Entropy_(information_theory)) — Shannon's $`H = -\sum p \log_2 p`$, the formal version of the "yes/no question budget" roads.
 
 **Negative results in science**
 - [Null result (Wikipedia)](https://en.wikipedia.org/wiki/Null_result) — why finding no effect is publishable knowledge; the framing behind Section 10's honest negative benchmark.
@@ -270,8 +278,8 @@ Each link was checked to load and match the topic.
 4. Turner, N. L. et al. Reconstruction of neocortex. *Cell* 185, 1082–1100 (2022). DOI: 10.1016/j.cell.2022.01.023
 5. `docs/ANALYSIS_PLAN.md` — pre-registered data, models, metrics, and results summary.
 6. Ding, Z. et al. Functional connectomics reveals general wiring rule in mouse visual cortex. *Nature* 640, 459–469 (2025). DOI: 10.1038/s41586-025-08840-3
-7. Lappalainen, J. K. et al. Connectome-constrained networks predict neural activity across the fly visual system. *Nature* 634, 1132–1140 (2024).
-8. Dorkenwald, S. et al. Neuronal wiring diagram of an adult brain. *Nature* 634, 124–138 (2024).
+7. Lappalainen, J. K. et al. Connectome-constrained networks predict neural activity across the fly visual system. *Nature* 634, 1132–1140 (2024). DOI: 10.1038/s41586-024-07939-3
+8. Dorkenwald, S. et al. Neuronal wiring diagram of an adult brain. *Nature* 634, 124–138 (2024). DOI: 10.1038/s41586-024-07558-y
 9. `src/wiring_tuning/microns.py` — dataset assembly, checksums, splits; `src/wiring_tuning/graphs.py` — the `ConnectomeGraph`.
 10. `src/wiring_tuning/models.py` — `MessagePassingLayer` and `GNNRegressor`.
 11. `reports/leaderboard_summary.csv` — per-(property, graph, model) means and 95% CIs over seeds 0–2.
