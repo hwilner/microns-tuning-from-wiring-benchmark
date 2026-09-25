@@ -12,6 +12,16 @@ import torch.nn as nn
 
 
 def scatter_add(src: torch.Tensor, index: torch.Tensor, dim_size: int) -> torch.Tensor:
+    """Scatter add.
+
+    Args:
+    src (torch.Tensor): src.
+    index (torch.Tensor): index.
+    dim_size (int): dim size.
+
+    Returns:
+    torch.Tensor: the add.
+    """
     out = src.new_zeros((dim_size,) + src.shape[1:])
     idx = index.view(-1, *([1] * (src.dim() - 1))).expand_as(src)
     out.scatter_add_(0, idx, src)
@@ -26,6 +36,12 @@ class MessagePassingLayer(nn.Module):
     """
 
     def __init__(self, in_dim: int, out_dim: int):
+        """Initialize the instance.
+
+        Args:
+        in_dim (int): in dim.
+        out_dim (int): out dim.
+        """
         super().__init__()
         self.msg = nn.Linear(in_dim, out_dim)
         self.upd = nn.Linear(in_dim + out_dim, out_dim)
@@ -33,6 +49,16 @@ class MessagePassingLayer(nn.Module):
     def forward(
         self, x: torch.Tensor, edge_index: torch.Tensor, edge_weight: torch.Tensor
     ) -> torch.Tensor:
+        """Forward.
+
+        Args:
+        x (torch.Tensor): x.
+        edge_index (torch.Tensor): edge index.
+        edge_weight (torch.Tensor): edge weight.
+
+        Returns:
+        torch.Tensor: the result.
+        """
         src, dst = edge_index[0], edge_index[1]
         n = x.size(0)
         w = edge_weight / edge_weight.mean().clamp_min(1e-6)
@@ -46,6 +72,13 @@ class GNNRegressor(nn.Module):
     """Graph neural network regressing a tuning property per neuron."""
 
     def __init__(self, in_dim: int, hidden_dim: int = 64, n_layers: int = 2):
+        """Initialize the instance.
+
+        Args:
+        in_dim (int): in dim.
+        hidden_dim (int): hidden dim.
+        n_layers (int): n layers.
+        """
         super().__init__()
         dims = [in_dim] + [hidden_dim] * n_layers
         self.layers = nn.ModuleList(
@@ -56,6 +89,16 @@ class GNNRegressor(nn.Module):
     def forward(
         self, x: torch.Tensor, edge_index: torch.Tensor, edge_weight: torch.Tensor
     ) -> torch.Tensor:
+        """Forward.
+
+        Args:
+        x (torch.Tensor): x.
+        edge_index (torch.Tensor): edge index.
+        edge_weight (torch.Tensor): edge weight.
+
+        Returns:
+        torch.Tensor: the result.
+        """
         h = x
         for layer in self.layers:
             h = layer(h, edge_index, edge_weight)
@@ -66,6 +109,12 @@ class BaselineMLP(nn.Module):
     """Features-only MLP baseline (node features, no wiring)."""
 
     def __init__(self, in_dim: int, hidden_dim: int = 64):
+        """Initialize the instance.
+
+        Args:
+        in_dim (int): in dim.
+        hidden_dim (int): hidden dim.
+        """
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(in_dim, hidden_dim),
@@ -76,16 +125,27 @@ class BaselineMLP(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward.
+
+        Args:
+        x (torch.Tensor): x.
+
+        Returns:
+        torch.Tensor: the result.
+        """
         return self.net(x).squeeze(-1)
 
 
 class DegreeBaseline(nn.Module):
-    """Hand-crafted connectivity features (degree/E-I balance) MLP baseline.
-    Input is the deterministic degree feature vector from
-    ConnectomeGraph.degree_features().
-    """
+    """Hand-crafted connectivity features (degree/E-I balance) MLP baseline. Input is the deterministic degree feature vector from ConnectomeGraph.degree_features()."""
 
     def __init__(self, in_dim: int = 6, hidden_dim: int = 64):
+        """Initialize the instance.
+
+        Args:
+        in_dim (int): in dim.
+        hidden_dim (int): hidden dim.
+        """
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(in_dim, hidden_dim),
@@ -94,6 +154,14 @@ class DegreeBaseline(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward.
+
+        Args:
+        x (torch.Tensor): x.
+
+        Returns:
+        torch.Tensor: the result.
+        """
         return self.net(x).squeeze(-1)
 
 
@@ -101,8 +169,24 @@ class MeanBaseline:
     """Null model: always predicts the train-set mean. Non-torch."""
 
     def fit(self, y_train: torch.Tensor) -> "MeanBaseline":
+        """Fit.
+
+        Args:
+        y_train (torch.Tensor): y train.
+
+        Returns:
+        'MeanBaseline': the result.
+        """
         self.mean_ = float(y_train.mean())
         return self
 
     def predict(self, n: int) -> torch.Tensor:
+        """Predict.
+
+        Args:
+        n (int): n.
+
+        Returns:
+        torch.Tensor: the result.
+        """
         return torch.full((n,), self.mean_)

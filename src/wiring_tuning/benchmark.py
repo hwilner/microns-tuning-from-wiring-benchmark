@@ -38,8 +38,7 @@ def run_benchmark(
     epochs: int = 150,
     include_rewired_null: bool = True,
 ) -> pd.DataFrame:
-    """Run all models across seeds on the planted synthetic connectome
-    (and optionally its degree-preserving rewired null).
+    """Run all models across seeds on the planted synthetic connectome (and optionally its degree-preserving rewired null).
 
     Returns a long-format results table:
     [graph, model, seed, r2, pearson] evaluated on the test mask.
@@ -72,6 +71,7 @@ def summarize(results: pd.DataFrame) -> pd.DataFrame:
 
 
 def main() -> None:
+    """Main."""
     results = run_benchmark()
     summary = summarize(results)
     print("Benchmark results (test set, mean +/- std over seeds):")

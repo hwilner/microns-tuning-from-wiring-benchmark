@@ -19,12 +19,12 @@ class ConnectomeGraph:
     """Directed, weighted connectome graph.
 
     Attributes:
-        node_features: (N, F) float array of per-neuron features
-            (e.g., one-hot cell type, layer depth).
-        edge_index: (2, E) int64 array of (source, target) node indices.
-        edge_weight: (E,) float array of synaptic weights (synapse counts).
-        cell_types: (N,) int array of cell-type ids (0=exc, 1..K=inhibitory).
-        node_ids: (N,) array of stable node identifiers (e.g., MICrONS cell IDs).
+    node_features: (N, F) float array of per-neuron features
+    (e.g., one-hot cell type, layer depth).
+    edge_index: (2, E) int64 array of (source, target) node indices.
+    edge_weight: (E,) float array of synaptic weights (synapse counts).
+    cell_types: (N,) int array of cell-type ids (0=exc, 1..K=inhibitory).
+    node_ids: (N,) array of stable node identifiers (e.g., MICrONS cell IDs).
     """
 
     node_features: np.ndarray
@@ -35,10 +35,20 @@ class ConnectomeGraph:
 
     @property
     def num_nodes(self) -> int:
+        """Num nodes.
+
+        Returns:
+        int: the nodes.
+        """
         return self.node_features.shape[0]
 
     @property
     def num_edges(self) -> int:
+        """Num edges.
+
+        Returns:
+        int: the edges.
+        """
         return self.edge_index.shape[1]
 
     def to_torch(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -57,9 +67,7 @@ class ConnectomeGraph:
         return in_deg, out_deg
 
     def degree_features(self) -> np.ndarray:
-        """Deterministic hand-crafted connectivity features per node:
-        [in_deg, out_deg, in+out, in-out, frac_inhibitory_input, frac_inhibitory_output].
-        """
+        """Deterministic hand-crafted connectivity features per node: [in_deg, out_deg, in+out, in-out, frac_inhibitory_input, frac_inhibitory_output]."""
         n = self.num_nodes
         src, dst, w = self.edge_index[0], self.edge_index[1], self.edge_weight
         in_deg, out_deg = self.in_out_degree()

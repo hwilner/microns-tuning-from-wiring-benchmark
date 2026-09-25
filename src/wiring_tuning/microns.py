@@ -126,6 +126,15 @@ def download_file(
 
 
 def sha256_file(path: str | Path, chunk_mb: int = 8) -> str:
+    """Sha256 file.
+
+    Args:
+        path (str | Path): path.
+        chunk_mb (int): chunk mb.
+
+    Returns:
+        str: the file.
+    """
     h = hashlib.sha256()
     with open(path, "rb") as fh:
         while True:

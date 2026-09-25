@@ -62,6 +62,7 @@ def test_gnn_recovers_structure_not_null():
 
 
 def test_training_loop_smoke():
+    """Test training loop smoke."""
     graph, y = make_synthetic_connectome(n_neurons=100, seed=2)
     train, val, _ = split_masks(graph.num_nodes, seed=2)
     model = GNNRegressor(graph.node_features.shape[1], hidden_dim=16)
@@ -72,6 +73,7 @@ def test_training_loop_smoke():
 
 
 def test_degree_features_deterministic():
+    """Test degree features deterministic."""
     graph, _ = make_synthetic_connectome(n_neurons=80, seed=3)
     f1 = graph.degree_features()
     f2 = graph.degree_features()
@@ -80,6 +82,7 @@ def test_degree_features_deterministic():
 
 
 def test_rewire_preserves_degree_sequence():
+    """Test rewire preserves degree sequence."""
     graph, _ = make_synthetic_connectome(n_neurons=100, seed=4)
     rewired = degree_preserving_rewire(graph, seed=4)
     n = graph.num_nodes
@@ -93,6 +96,7 @@ def test_rewire_preserves_degree_sequence():
 
 
 def test_subgraph_sampling():
+    """Test subgraph sampling."""
     graph, _ = make_synthetic_connectome(n_neurons=60, seed=5)
     sub = sample_subgraph(graph, np.arange(20))
     assert sub.num_nodes == 20

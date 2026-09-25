@@ -26,6 +26,15 @@ def split_masks(
 
 
 def r2_score(y_true: torch.Tensor, y_pred: torch.Tensor) -> float:
+    """R2 score.
+
+    Args:
+    y_true (torch.Tensor): y true.
+    y_pred (torch.Tensor): y pred.
+
+    Returns:
+    float: the score.
+    """
     y_true = y_true.detach().float()
     y_pred = y_pred.detach().float()
     ss_res = ((y_true - y_pred) ** 2).sum()
@@ -34,6 +43,15 @@ def r2_score(y_true: torch.Tensor, y_pred: torch.Tensor) -> float:
 
 
 def pearson_corr(y_true: torch.Tensor, y_pred: torch.Tensor) -> float:
+    """Pearson corr.
+
+    Args:
+    y_true (torch.Tensor): y true.
+    y_pred (torch.Tensor): y pred.
+
+    Returns:
+    float: the corr.
+    """
     yt = y_true.detach().float() - y_true.detach().float().mean()
     yp = y_pred.detach().float() - y_pred.detach().float().mean()
     denom = (yt.norm() * yp.norm()).clamp_min(1e-12)
@@ -61,8 +79,7 @@ def train_model(
     seed: int = 0,
     verbose: bool = False,
 ) -> dict[str, list[float]]:
-    """Train a node-regression model with MSE loss on the train mask,
-    early stopping on validation loss. Returns history of val losses.
+    """Train a node-regression model with MSE loss on the train mask, early stopping on validation loss. Returns history of val losses.
 
     The model is selected by its class: GNNRegressor consumes the full graph;
     BaselineMLP consumes node features; DegreeBaseline consumes degree features.

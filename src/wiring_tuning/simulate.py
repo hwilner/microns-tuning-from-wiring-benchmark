@@ -30,8 +30,8 @@ def make_synthetic_connectome(
     from the graph but destroyed by topology-null rewiring.
 
     Returns:
-        graph: ConnectomeGraph with one-hot cell-type node features.
-        y: (N,) target labels (continuous tuning property in [-1, 1]).
+    graph: ConnectomeGraph with one-hot cell-type node features.
+    y: (N,) target labels (continuous tuning property in [-1, 1]).
     """
     rng = np.random.default_rng(seed)
 
@@ -79,8 +79,7 @@ def make_synthetic_connectome(
 def degree_preserving_rewire(
     graph: ConnectomeGraph, n_swaps: int | None = None, seed: int = 0
 ) -> ConnectomeGraph:
-    """Degree-preserving topology null: random edge swaps that keep the exact
-    in/out degree sequence but destroy fine connectivity.
+    """Degree-preserving topology null: random edge swaps that keep the exact in/out degree sequence but destroy fine connectivity.
 
     Uses the double-edge swap: for edges (a->b), (c->d), rewire to
     (a->d), (c->b), skipping self-loops and duplicate edges.

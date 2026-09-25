@@ -49,6 +49,11 @@ def _fake_release(tmp_path, n=40):
 
 
 def test_build_connectome(tmp_path):
+    """Test build connectome.
+
+    Args:
+        tmp_path: tmp path.
+    """
     nodes, edges = _fake_release(tmp_path)
     graph, labels, table = microns.build_connectome(nodes, edges, min_synapses=1)
     # node with NaN coordinate is dropped
@@ -63,6 +68,11 @@ def test_build_connectome(tmp_path):
 
 
 def test_assemble_and_reload(tmp_path):
+    """Test assemble and reload.
+
+    Args:
+        tmp_path: tmp path.
+    """
     _fake_release(tmp_path)
     manifest = microns.assemble_dataset(tmp_path, seed=7)
     assert manifest["n_nodes"] > 0
@@ -81,6 +91,7 @@ def test_assemble_and_reload(tmp_path):
 
 
 def test_pref_ori_circular_encoding():
+    """Test pref ori circular encoding."""
     from wiring_tuning.harness import _pref_ori_targets
 
     t = _pref_ori_targets(np.array([0.0, 90.0, 180.0]))
@@ -90,6 +101,11 @@ def test_pref_ori_circular_encoding():
 
 
 def test_cave_error_message_actionable(monkeypatch):
+    """Test cave error message actionable.
+
+    Args:
+        monkeypatch: monkeypatch.
+    """
     monkeypatch.delenv("CAVE_TOKEN", raising=False)
     try:
         import caveclient

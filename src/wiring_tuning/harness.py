@@ -1,14 +1,14 @@
 """Evaluation harness: one-command reproduction of the real-data leaderboard.
 
 Usage:
-    python -m wiring_tuning.harness                # full run (downloads data)
-    python -m wiring_tuning.harness --check        # reproduce + diff vs reports/
-    python -m wiring_tuning.harness --synthetic    # data-free synthetic run
+python -m wiring_tuning.harness                # full run (downloads data)
+python -m wiring_tuning.harness --check        # reproduce + diff vs reports/
+python -m wiring_tuning.harness --synthetic    # data-free synthetic run
 
 Outputs (default ``reports/``):
-    leaderboard.csv           long-format per-(property, graph, model, seed)
-    leaderboard_summary.csv   mean/std over seeds
-    leaderboard_meta.json     dataset manifest + run config
+leaderboard.csv           long-format per-(property, graph, model, seed)
+leaderboard_summary.csv   mean/std over seeds
+leaderboard_meta.json     dataset manifest + run config
 """
 
 from __future__ import annotations
@@ -32,8 +32,7 @@ DEFAULT_PROPERTIES = ("gosi", "osi", "pref_ori")
 
 
 def _pref_ori_targets(theta_deg: np.ndarray) -> np.ndarray:
-    """Encode preferred orientation as a single circular signal in [-1, 1]:
-    cos(2*theta) -- orientation is 180-degree periodic."""
+    """Encode preferred orientation as a single circular signal in [-1, 1]: cos(2*theta) -- orientation is 180-degree periodic."""
     return np.cos(2.0 * np.deg2rad(theta_deg)).astype(np.float32)
 
 
@@ -104,6 +103,7 @@ def run_real_benchmark(
 
 
 def main() -> None:
+    """Main."""
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--data-dir", default="data", help="dataset directory")
     ap.add_argument("--out-dir", default="reports", help="output directory")
