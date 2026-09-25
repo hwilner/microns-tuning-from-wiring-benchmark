@@ -1,8 +1,6 @@
 # Concept figure (Mermaid fallback) — Paper 1: Predicting Tuning from Wiring
 
-> The canonical vector figure is `concept_figure.svg` in this directory. This file is a
-> faithful Mermaid rendition kept as a text-based fallback (the PNG raster could not be
-> committed through the available API tooling).
+> **Note.** The rendered concept figure is [`01-concept-schematic.png`](01-concept-schematic.png) in this folder — a generated scientific illustration. This file keeps the Mermaid source of the same diagram so it remains editable and re-renderable.
 
 ```mermaid
 flowchart LR

@@ -1,12 +1,16 @@
 # Extended Introduction — A Beginner's Guide to Predicting Tuning from Wiring
 
-![Concept figure: from electron microscopy to a connectome graph, through a graph neural network, to predicted neuronal tuning evaluated against baselines and null graphs](figures/concept_figure.svg)
+![Concept figure: from electron microscopy to a connectome graph, through a graph neural network, to predicted neuronal tuning evaluated against baselines and null graphs](figures/01-concept-schematic.png)
 
 *Figure 1. The Paper 1 pipeline: an EM-derived wiring diagram becomes a graph of nodes and arrows; a graph neural network passes messages along those arrows; the result is a predicted tuning curve per neuron, scored honestly against wiring-free baselines and shuffled-wiring nulls.*
 
 **Audience:** this document assumes *zero* background in neuroscience or machine learning. Every technical idea is first shown on a tiny concrete example you could draw on paper, then explained in words, and only then written in symbols — which are just shorthand for the paper example.
 
 **Series note:** This is **Paper 1 of 4** in the MICrONS function-from-wiring series [1]. Papers 2 (interpretability), 3 (cross-area/cross-species generalization), and 4 (scalability) all build on this paper's benchmark, splits, and trained models.
+
+![Data collection and measurement workflow: the same mouse visual cortex volume is imaged with electron microscopy to reconstruct wiring and with two-photon calcium imaging to record neuronal activity, then the two are aligned](figures/02-data-collection.png)
+
+*Data workflow: The same mouse visual cortex volume is imaged with electron microscopy to reconstruct wiring and with two-photon calcium imaging to record neuronal activity, then the two are aligned.*
 
 ## Start here: the math toolkit from zero
 

@@ -1,6 +1,6 @@
 # Introduction — Paper 1: Predicting Neuronal Tuning from Wiring (MICrONS Benchmark)
 
-![Concept figure: from electron microscopy to a connectome graph, through a graph neural network, to predicted neuronal tuning evaluated against baselines and null graphs](figures/concept_figure.svg)
+![Concept figure: from electron microscopy to a connectome graph, through a graph neural network, to predicted neuronal tuning evaluated against baselines and null graphs](figures/01-concept-schematic.png)
 
 *Figure 1. The Paper 1 pipeline at a glance: the EM-derived wiring diagram becomes a graph of neurons (nodes) and synapses (weighted edges); a graph neural network passes messages along the wiring to predict each neuron's tuning; predictions are scored honestly against wiring-free baselines and degree-preserving null graphs. (Mermaid fallback: `figures/concept_figure.md`.)*
 
