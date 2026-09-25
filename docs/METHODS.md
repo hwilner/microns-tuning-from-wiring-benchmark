@@ -24,7 +24,7 @@ Planned but **not** yet implemented:
 
 - **CAVE-token access to the full proofread graph.** The current dataset only contains edges between pairs of coregistered neurons (~1.3 edges/neuron). The full EM tables (`synapses_pni_2`, etc. on the `minnie65_public` datastack) hold hundreds of partners per neuron but require a free CAVE token (`CAVE_TOKEN` env var; see `try_cave_client` in `microns.py` and `docs/DATA_ACCESS.md`).
 - **Manuscript outline + figures** (tracked in issue #1).
-- Denser-graph reruns and scaling work feed Paper 4 of the series.
+- Denser-graph reruns and scaling work are deferred to future work.
 
 ---
 

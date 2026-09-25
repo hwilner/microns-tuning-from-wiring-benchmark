@@ -1,10 +1,6 @@
-# MICrONS Tuning-from-Wiring Benchmark (Paper 1)
+# MICrONS Tuning-from-Wiring Benchmark 
 
 This independent research repository plans and tracks an open benchmark: predicting neuronal visual tuning from electron-microscopy synaptic connectivity in the MICrONS mm³ dataset. It provides graph-learning utilities for transparent review and extension.
-
-## Series position
-
-This is **Paper 1** of the MICrONS function-from-wiring series (4 papers). It is the foundation of the series; Papers 2–4 build on its benchmark, trained models, and data splits.
 
 ## Research plan
 

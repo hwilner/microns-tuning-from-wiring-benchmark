@@ -1,4 +1,4 @@
-# Analysis plan — tuning-from-wiring benchmark (Paper 1)
+# Analysis plan — tuning-from-wiring benchmark 
 
 Pre-registered metrics and hyperparameter budget for issue #3
 (`train-gnn-benchmark`). Written before the real-data runs; the numbers are
@@ -65,4 +65,4 @@ Nulls: `mean_null` (target null) and `microns_rewired_null`
 
 ## Boundary
 
-Prediction only; no mechanistic claims (deferred to Paper 2).
+Prediction only; no mechanistic claims (deferred to future work).

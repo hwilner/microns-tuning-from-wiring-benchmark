@@ -2,11 +2,9 @@
 
 ![Concept figure: from electron microscopy to a connectome graph, through a graph neural network, to predicted neuronal tuning evaluated against baselines and null graphs](figures/01-concept-schematic.png)
 
-*Figure 1. The Paper 1 pipeline: an EM-derived wiring diagram becomes a graph of nodes and arrows; a graph neural network passes messages along those arrows; the result is a predicted tuning curve per neuron, scored honestly against wiring-free baselines and shuffled-wiring nulls.*
+*Figure 1. The pipeline: an EM-derived wiring diagram becomes a graph of nodes and arrows; a graph neural network passes messages along those arrows; the result is a predicted tuning curve per neuron, scored honestly against wiring-free baselines and shuffled-wiring nulls.*
 
 **Audience:** this document assumes *zero* background in neuroscience or machine learning. Every technical idea is first shown on a tiny concrete example you could draw on paper, then explained in words, and only then written in symbols — which are just shorthand for the paper example.
-
-**Series note:** This is **Paper 1 of 4** in the MICrONS function-from-wiring series [1]. Papers 2 (interpretability), 3 (cross-area/cross-species generalization), and 4 (scalability) all build on this paper's benchmark, splits, and trained models.
 
 ![Data collection and measurement workflow: the same mouse visual cortex volume is imaged with electron microscopy to reconstruct wiring and with two-photon calcium imaging to record neuronal activity, then the two are aligned](figures/02-data-collection.png)
 
@@ -16,7 +14,7 @@
 
 Every symbol used later in this document is defined here in plain words, with a tiny numeric example. Nothing below assumes any math background — if you can add and multiply, you can check every line. Come back whenever a symbol looks unfamiliar.
 
-- **Vector.** A vector is just a short list of numbers, kept in a fixed order, written like $`(3, 1)`$. A neuron's "note card" in this series is a vector. *Example:* (3, 1) might mean "3 convergence motifs, 1 triplet".
+- **Vector.** A vector is just a short list of numbers, kept in a fixed order, written like $`(3, 1)`$. A neuron's "note card" here is a vector. *Example:* (3, 1) might mean "3 convergence motifs, 1 triplet".
 - **Matrix.** A matrix is a table of numbers with rows and columns — a spreadsheet. $`M = \begin{pmatrix} 0 & 3 \\ 1 & 0 \end{pmatrix}`$ has 2 rows and 2 columns. Multiplying a matrix by a vector means "compute one weighted sum per row".
 - **Sum (Σ).** The symbol $`\sum`$ means "add these up": $`\sum_{j} w_j`$ with weights $`w = (3, 1, 5)`$ is $`3 + 1 + 5 = 9`$. The little letter under the Σ just names what you are adding over.
 - **Weighted sum.** Multiply each item by its importance, then add: $`3 \cdot 1 + 1 \cdot 1 = 4`$ is the weighted sum of two identical cards with weights 3 and 1. This is the single most common computation in this document.
@@ -39,7 +37,7 @@ Analogy: neurons are people in a huge office; synapses are one-directional memo 
 
 ## 2. What is a connectome?
 
-A **connectome** is the complete wiring diagram of a piece of brain: every neuron and every synapse. The classic analogy is a **city's road map versus the traffic**. The connectome is the road map; the *activity* of neurons — who fires, when, in response to what — is the traffic. The central question of this series: **how much of the traffic can you explain with only the road map?**
+A **connectome** is the complete wiring diagram of a piece of brain: every neuron and every synapse. The classic analogy is a **city's road map versus the traffic**. The connectome is the road map; the *activity* of neurons — who fires, when, in response to what — is the traffic. The central question of this work: **how much of the traffic can you explain with only the road map?**
 
 The first complete connectome was the 302-neuron nervous system of the worm *Caenorhabditis elegans*, reconstructed by White and colleagues in a thirteen-year electron-microscopy effort [2]. For decades it was the only one, because mapping even a speck of mammalian brain is astonishingly hard.
 
@@ -97,11 +95,11 @@ This repo's `ConnectomeGraph` is this napkin drawing at scale: an edge list, edg
 
 One object — the wiring diagram — can be entered through several doors. Pick whichever matches your habits; they all describe the same napkin.
 
-**Road 1: graph theory (nodes and edges).** The connectome is a directed, weighted graph: a set of nodes and a set of arrows with numbers on them. Everything in this series is built from three graph operations you can do on the napkin: count arrows into a node (in-degree), follow a chain of arrows (a path), and list a node's arrow-neighbors (its neighborhood). *Worked example:* on our napkin, C has in-degree 2 (from A and B), there is exactly one path from A to D (A → C → D, total weight passing through edges 3 and 5), and D's incoming neighborhood is just {C}. *What this road buys you:* the native language of connectomics — null models, motifs, and message passing are all statements about arrows. *What it costs you:* the graph throws away geometry; two neurons can be graph-neighbors while sitting millimeters apart.
+**Road 1: graph theory (nodes and edges).** The connectome is a directed, weighted graph: a set of nodes and a set of arrows with numbers on them. Everything in this repository is built from three graph operations you can do on the napkin: count arrows into a node (in-degree), follow a chain of arrows (a path), and list a node's arrow-neighbors (its neighborhood). *Worked example:* on our napkin, C has in-degree 2 (from A and B), there is exactly one path from A to D (A → C → D, total weight passing through edges 3 and 5), and D's incoming neighborhood is just {C}. *What this road buys you:* the native language of connectomics — null models, motifs, and message passing are all statements about arrows. *What it costs you:* the graph throws away geometry; two neurons can be graph-neighbors while sitting millimeters apart.
 
-**Road 2: set theory (membership and constraints).** The same napkin is two sets and a table: a node set V = {A, B, C, D} and an edge set E = {(A,C), (B,C), (C,D)}, plus a weight table w with w(A,C) = 3, w(B,C) = 1, w(C,D) = 5. Asking "is A wired to D?" is the membership test (A,D) ∈ E, which fails. A subgraph is just a subset; the coregistered graph of Paper 1 is the subset of MICrONS edges where *both* endpoints were also recorded — a constraint expressed purely as set intersection. *What this road buys you:* precision — every claim ("the null preserves degree") becomes a checkable statement about sets and counts. *What it costs you:* sets have no built-in notion of "influence flowing", so dynamics have to be added by hand.
+**Road 2: set theory (membership and constraints).** The same napkin is two sets and a table: a node set V = {A, B, C, D} and an edge set E = {(A,C), (B,C), (C,D)}, plus a weight table w with w(A,C) = 3, w(B,C) = 1, w(C,D) = 5. Asking "is A wired to D?" is the membership test (A,D) ∈ E, which fails. A subgraph is just a subset; the coregistered graph used here is the subset of MICrONS edges where *both* endpoints were also recorded — a constraint expressed purely as set intersection. *What this road buys you:* precision — every claim ("the null preserves degree") becomes a checkable statement about sets and counts. *What it costs you:* sets have no built-in notion of "influence flowing", so dynamics have to be added by hand.
 
-**Road 3: category-flavored composition (arrows that compose).** Read each arrow as "has a direct line to". Arrows *compose*: A → C and C → D give a composite path A ⇢ D, and the napkin's whole meaning is which composites exist. A motif (say, a feedforward triplet A → B, B → C, A → C) is then a small diagram in which two roads — the direct arrow and the two-step composite — share start and destination; Papers 2 and 4 lean hard on counting such diagrams. *Worked example:* our napkin has two composites of length 2 (A ⇢ D via C, and B ⇢ D via C) and none of length 3, so "news from A reaches D in exactly 2 hops" is a pure composition count. *What this road buys you:* paths and motifs become the primitive objects, which is exactly what interpretability needs. *What it costs you:* weights and probabilities fit awkwardly; it is a qualitative skeleton, not a quantitative model.
+**Road 3: category-flavored composition (arrows that compose).** Read each arrow as "has a direct line to". Arrows *compose*: A → C and C → D give a composite path A ⇢ D, and the napkin's whole meaning is which composites exist. A motif (say, a feedforward triplet A → B, B → C, A → C) is then a small diagram in which two roads — the direct arrow and the two-step composite — share start and destination; Later analyses lean hard on counting such diagrams. *Worked example:* our napkin has two composites of length 2 (A ⇢ D via C, and B ⇢ D via C) and none of length 3, so "news from A reaches D in exactly 2 hops" is a pure composition count. *What this road buys you:* paths and motifs become the primitive objects, which is exactly what interpretability needs. *What it costs you:* weights and probabilities fit awkwardly; it is a qualitative skeleton, not a quantitative model.
 
 ## 8. A graph neural network = gossip on the napkin
 
@@ -145,9 +143,9 @@ receiver A       0   0   0   0
 
 One gossip round is "each row takes a weighted sum of the senders' cards". *Worked example:* if every card is the single number 1 (A=B=C=D=1), then C's incoming sum is 3·1 + 1·1 = 4 and D's is 5·1 = 5 — read straight off the C and D rows. A second round is the same table applied to the new cards: D now receives 5·(C's new card). "Matrix multiplication" is nothing more than doing every row of this table at once. *What this road buys you:* the whole GNN becomes table arithmetic a spreadsheet can check, and two rounds = apply the table twice. *What it costs you:* the table for half a billion synapses is mostly zeros; the table view hides how sparse the real thing is, which is Paper 4's whole problem.
 
-**Road 2: discrete iterated maps (tomorrow = f(today)).** Think of the cards as a state that advances in clock ticks: card(t+1) = mix(card(t), neighbors' cards(t)). No calculus anywhere — just a rule applied over and over. *Worked example:* give A, B, C, D starting cards 1, 0, 0, 0 and use the rule "each neuron with incoming arrows replaces its card by the weighted sum of incoming cards (weights from the napkin); neurons without incoming arrows keep their card". Then t=0: (1,0,0,0); t=1: (1,0,3,0) because C computes 3·1 + 1·0; t=2: (1,0,3,15) because C recomputes the same 3 and D computes 5·3. News of A reaches D at t=2 — you watched the signal travel. Stability questions ("does the state settle?") become: does iterating the table stop changing the cards? *What this road buys you:* training-free simulation — you can trace *exactly* which round carries whose influence, which is what attribution in Paper 2 formalizes. *What it costs you:* the learned recipes W_msg, W_upd enter as black-box tables here; this road explains the mechanics, not the learning.
+**Road 2: discrete iterated maps (tomorrow = f(today)).** Think of the cards as a state that advances in clock ticks: card(t+1) = mix(card(t), neighbors' cards(t)). No calculus anywhere — just a rule applied over and over. *Worked example:* give A, B, C, D starting cards 1, 0, 0, 0 and use the rule "each neuron with incoming arrows replaces its card by the weighted sum of incoming cards (weights from the napkin); neurons without incoming arrows keep their card". Then t=0: (1,0,0,0); t=1: (1,0,3,0) because C computes 3·1 + 1·0; t=2: (1,0,3,15) because C recomputes the same 3 and D computes 5·3. News of A reaches D at t=2 — you watched the signal travel. Stability questions ("does the state settle?") become: does iterating the table stop changing the cards? *What this road buys you:* training-free simulation — you can trace *exactly* which round carries whose influence, which is what attribution analysis formalizes. *What it costs you:* the learned recipes W_msg, W_upd enter as black-box tables here; this road explains the mechanics, not the learning.
 
-**Road 3: information theory by counting.** Ask: how many yes/no questions does one gossip round answer about "where did D's card come from"? Before gossip, D's card could have been influenced by any of 4 nodes — log2(4) = 2 questions of uncertainty. After one round you know only C's arrow touches D, so the influence came from a set of size 1: 2 − log2(1) = 2 questions answered, i.e. the wiring told you 2 bits about the source of D's update. On the real sparse graph (1.3 edges per neuron) a neuron "collects news" from barely more than one partner, so the wiring answers close to zero questions per neuron — which is the information-theoretic way to state Paper 1's negative result. *What this road buys you:* a unit of measurement (bits/questions) for "how much the wiring could possibly tell you", comparable across graphs. *What it costs you:* counting questions assumes influences are distinct and independent; correlated neighbors make the real number smaller than the count suggests.
+**Road 3: information theory by counting.** Ask: how many yes/no questions does one gossip round answer about "where did D's card come from"? Before gossip, D's card could have been influenced by any of 4 nodes — log2(4) = 2 questions of uncertainty. After one round you know only C's arrow touches D, so the influence came from a set of size 1: 2 − log2(1) = 2 questions answered, i.e. the wiring told you 2 bits about the source of D's update. On the real sparse graph (1.3 edges per neuron) a neuron "collects news" from barely more than one partner, so the wiring answers close to zero questions per neuron — which is the information-theoretic way to state this benchmark's negative result. *What this road buys you:* a unit of measurement (bits/questions) for "how much the wiring could possibly tell you", comparable across graphs. *What it costs you:* counting questions assumes influences are distinct and independent; correlated neighbors make the real number smaller than the count suggests.
 
 ### How the recipes get learned (training, in one paragraph)
 
@@ -179,18 +177,6 @@ flowchart LR
     classDef note fill:#fff8dc,stroke:#999;
 ```
 
-### The four-paper series
-
-```mermaid
-flowchart TB
-    P1[Paper 1<br/>microns-tuning-from-wiring-benchmark<br/>benchmark, splits, baselines, v1 results]
-    P2[Paper 2<br/>interpretability:<br/>what did the models learn?]
-    P3[Paper 3<br/>cross-area / cross-species<br/>generalization]
-    P4[Paper 4<br/>scaling to the dense<br/>proofread graph]
-    P1 --> P2
-    P1 --> P3
-    P1 --> P4
-```
 
 ## 9. How we measure success — each metric on the napkin
 
@@ -233,7 +219,7 @@ What actually happened on real data [5,11]:
 
 In plain language: at this sparsity, *who* a neuron is wired to carries no measurable extra information beyond *where* it sits. With ~1.3 gossip partners per neuron, there is almost nothing to gossip about.
 
-**Why this is valuable, not a failure.** Science advances by quantifying effects, including zero effects. This benchmark establishes reproducibly, with pre-registered metrics [5] — the analysis plan was written down and locked before looking at the results, so the test cannot be quietly adjusted afterward — that (i) the sparse coregistered graph alone is insufficient, and (ii) any future claim of "wiring predicts tuning" must beat these baselines and these nulls. It also points at the fix: the **full proofread EM graph** via the CAVE interface (free token; see `docs/DATA_ACCESS.md`), where each neuron has hundreds of partners — scaled up in **Paper 4**. A negative result with a hard benchmark and a clear path forward is the foundation the series stands on.
+**Why this is valuable, not a failure.** Science advances by quantifying effects, including zero effects. This benchmark establishes reproducibly, with pre-registered metrics [5] — the analysis plan was written down and locked before looking at the results, so the test cannot be quietly adjusted afterward — that (i) the sparse coregistered graph alone is insufficient, and (ii) any future claim of "wiring predicts tuning" must beat these baselines and these nulls. It also points at the fix: the **full proofread EM graph** via the CAVE interface (free token; see `docs/DATA_ACCESS.md`), where each neuron has hundreds of partners — scaled up in later work. A negative result with a hard benchmark and a clear path forward is the foundation the series stands on.
 
 ## 11. Try it yourself
 
@@ -249,7 +235,7 @@ Everything downloads automatically (~500 MB once, no account needed) [9,11].
 
 ## Choosing your road
 
-Every core idea in this document was presented through several independent doors, and you only need one per idea. If you think in drawings of dots and arrows, take the graph-theory road throughout. If you think in spreadsheets and tables, take the weight-table road for message passing and the frequency road for tuning and metrics. If you think in code, take the discrete iterated map road — a GNN layer is a loop you can write in ten lines. If you think in sets and constraints, the connectome-as-sets and split-as-partition roads will feel like home. If you think in questions and answers, take the information-by-counting roads — they state both the benchmark's honesty controls and its negative result in the cleanest units. And if you think in pictures, the geometry road turns tuning into points on a circle. The roads meet at the same destination: Paper 1's claim that, at ~1.3 edges per neuron, wiring alone does not yet predict tuning — with the tools to check that claim yourself, whichever road you took to get there.
+Every core idea in this document was presented through several independent doors, and you only need one per idea. If you think in drawings of dots and arrows, take the graph-theory road throughout. If you think in spreadsheets and tables, take the weight-table road for message passing and the frequency road for tuning and metrics. If you think in code, take the discrete iterated map road — a GNN layer is a loop you can write in ten lines. If you think in sets and constraints, the connectome-as-sets and split-as-partition roads will feel like home. If you think in questions and answers, take the information-by-counting roads — they state both the benchmark's honesty controls and its negative result in the cleanest units. And if you think in pictures, the geometry road turns tuning into points on a circle. The roads meet at the same destination: this benchmark's claim that, at ~1.3 edges per neuron, wiring alone does not yet predict tuning — with the tools to check that claim yourself, whichever road you took to get there.
 
 ## Learn more (verified links)
 
@@ -276,7 +262,7 @@ Each link was checked to load and match the topic.
 
 ## References
 
-1. This repository's planning doc: `docs/INTRODUCTION.md` (series position, background, gap, methods).
+1. This repository's planning doc: `docs/INTRODUCTION.md` (background, gap, methods).
 2. White, J. G. et al. The structure of the nervous system of the nematode *Caenorhabditis elegans*. *Phil. Trans. R. Soc. B* 314, 1–340 (1986). DOI: 10.1098/rstb.1986.0056
 3. MICrONS Consortium et al. Functional connectomics spanning multiple areas of mouse visual cortex. *Nature* 640, 435–447 (2025). DOI: 10.1038/s41586-025-08790-w
 4. Turner, N. L. et al. Reconstruction of neocortex. *Cell* 185, 1082–1100 (2022). DOI: 10.1016/j.cell.2022.01.023

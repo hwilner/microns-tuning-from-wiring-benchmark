@@ -1,10 +1,8 @@
-# Introduction — Paper 1: Predicting Neuronal Tuning from Wiring (MICrONS Benchmark)
+# Introduction — Predicting Neuronal Tuning from Wiring (MICrONS Benchmark)
 
 ![Concept figure: from electron microscopy to a connectome graph, through a graph neural network, to predicted neuronal tuning evaluated against baselines and null graphs](figures/01-concept-schematic.png)
 
-*Figure 1. The Paper 1 pipeline at a glance: the EM-derived wiring diagram becomes a graph of neurons (nodes) and synapses (weighted edges); a graph neural network passes messages along the wiring to predict each neuron's tuning; predictions are scored honestly against wiring-free baselines and degree-preserving null graphs. (Mermaid fallback: `figures/concept_figure.md`.)*
-
-**Series note:** This is **Paper 1 of 4** in the MICrONS function-from-wiring series. It is the first paper and does not build on any former paper. Papers 2 (interpretability), 3 (cross-area/cross-species generalization), and 4 (scalability methods) all build on this paper's benchmark, splits, and trained models.
+*Figure 1. The pipeline at a glance: the EM-derived wiring diagram becomes a graph of neurons (nodes) and synapses (weighted edges); a graph neural network passes messages along the wiring to predict each neuron's tuning; predictions are scored honestly against wiring-free baselines and degree-preserving null graphs. (Mermaid fallback: `figures/concept_figure.md`.)*
 
 ## Background
 
@@ -39,17 +37,17 @@ The gap: there is **no public, reproducible benchmark** that asks how well neuro
 
 ## Methods
 
-We represent the MICrONS connectome as a directed, weighted graph (edge weight = synapse count; node features = cell type, layer, morphology summaries) and train GNNs (GCN-style message passing [7], sampling-based aggregation [9], and attention variants [10], implemented in PyTorch Geometric) to regress orientation selectivity index, direction selectivity index, and receptive-field parameters for each functionally characterized neuron. Baselines include: (i) hand-crafted connectivity statistics with gradient-boosted trees; (ii) cell-type-only prediction (no wiring); (iii) degree-preserving randomized graphs that destroy fine connectivity while retaining global statistics. We define fixed, versioned train/validation/test splits (by cortical area and depth strata) so that all downstream papers in this series compare identical numbers. Evaluation uses held-out R², rank correlation of tuning curves, and calibration analysis, with uncertainty from ensembling.
+We represent the MICrONS connectome as a directed, weighted graph (edge weight = synapse count; node features = cell type, layer, morphology summaries) and train GNNs (GCN-style message passing [7], sampling-based aggregation [9], and attention variants [10], implemented in PyTorch Geometric) to regress orientation selectivity index, direction selectivity index, and receptive-field parameters for each functionally characterized neuron. Baselines include: (i) hand-crafted connectivity statistics with gradient-boosted trees; (ii) cell-type-only prediction (no wiring); (iii) degree-preserving randomized graphs that destroy fine connectivity while retaining global statistics. We define fixed, versioned train/validation/test splits (by cortical area and depth strata) so so that downstream work compares identical numbers. Evaluation uses held-out R², rank correlation of tuning curves, and calibration analysis, with uncertainty from ensembling.
 
 ## Expected contributions
 
 1. The first open, reproducible **function-from-wiring benchmark** on the MICrONS dataset: data loaders, fixed splits, evaluation harness, and baseline results.
 2. A quantitative answer to how much of visual tuning is recoverable from connectivity alone, per area and per cell class.
-3. Trained reference models and feature extractors that Papers 2–4 interpret, transfer, and scale.
+3. Trained reference models and feature extractors that later studies can interpret, transfer, and scale.
 
 ## Scope and boundary
 
-This repository contains planning, software, and synthetic-data tests for the benchmark. Prediction is not mechanism: strong predictive accuracy does not establish that wiring *causes* tuning, only that it *contains information about* it; biological interpretation is deferred to Paper 2, cross-area/cross-species transfer to Paper 3, and scaling to Paper 4. We do not attempt connectome-constrained dynamical simulation of the full circuit.
+This repository contains planning, software, and synthetic-data tests for the benchmark. Prediction is not mechanism: strong predictive accuracy does not establish that wiring *causes* tuning, only that it *contains information about* it; biological interpretation, cross-area/cross-species transfer, and scaling are deferred to later work. We do not attempt connectome-constrained dynamical simulation of the full circuit.
 
 ## References
 
