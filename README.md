@@ -86,9 +86,9 @@ python -m wiring_tuning.harness              # real MICrONS benchmark (downloads
 python -m wiring_tuning.harness --check      # verify the committed leaderboard reproduces (read-only)
 ```
 
-Latest validation (2026-10-25): 24/24 data-free tests pass (Python 3.11, CPU,
+Latest validation (2026-10-25): 25/25 data-free tests pass (Python 3.11, CPU,
 torch 2.14.1); the committed leaderboard was regenerated from the public
-MICrONS release and reproduces from a fresh run; details in
+MICrONS release and reproduces bit-for-bit from a fresh run; details in
 `docs/RESULTS.md` Table 5.
 
 ## Keywords
