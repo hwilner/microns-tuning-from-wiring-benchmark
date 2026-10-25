@@ -182,3 +182,46 @@ def test_benchmark_reproduces_across_fresh_processes():
         for _ in range(2)
     ]
     assert outputs[0] == outputs[1]
+
+
+def test_rewire_preserves_the_degree_statistics_the_baseline_consumes():
+    """Pin exactly which degree statistics the rewiring null preserves.
+
+    The double-edge swap keeps the *unweighted* in/out degree count of every
+    node and the *weighted* out-degree, because the synapse counts travel
+    with their source edge. It does **not** keep the weighted in-degree: the
+    two target nodes of a swap exchange their incoming totals.
+    `ConnectomeGraph.degree_features()` consumes the weighted in-degree, so
+    the `degree_mlp` control baseline sees different features in the null
+    than in the real graph. This is the documented v1 limitation of the null
+    (see `docs/METHODS.md`).
+    """
+    graph, _ = make_synthetic_connectome(n_neurons=100, seed=4)
+    rewired = degree_preserving_rewire(graph, seed=4)
+    n = graph.num_nodes
+
+    def weighted_degrees(g):
+        src, dst, w = g.edge_index[0], g.edge_index[1], g.edge_weight
+        return (
+            np.bincount(dst, weights=w, minlength=n),
+            np.bincount(src, weights=w, minlength=n),
+        )
+
+    weighted_in, weighted_out = weighted_degrees(graph)
+    rewired_in, rewired_out = weighted_degrees(rewired)
+
+    # Unweighted degree counts are preserved exactly.
+    np.testing.assert_array_equal(
+        np.bincount(graph.edge_index[1], minlength=n),
+        np.bincount(rewired.edge_index[1], minlength=n),
+    )
+    np.testing.assert_array_equal(
+        np.bincount(graph.edge_index[0], minlength=n),
+        np.bincount(rewired.edge_index[0], minlength=n),
+    )
+    # The weighted out-degree is preserved exactly.
+    np.testing.assert_array_equal(weighted_out, rewired_out)
+    # The weighted in-degree is *not* preserved per node -- the v1 limitation.
+    assert np.any(weighted_in != rewired_in)
+    # Consequently the degree features consumed by the baseline differ.
+    assert not np.array_equal(graph.degree_features(), rewired.degree_features())

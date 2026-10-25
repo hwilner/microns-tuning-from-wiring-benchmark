@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: data-free test suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy pandas scipy scikit-learn pytest
+          # The CPU wheel keeps the job small; the models are tiny and run on CPU.
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -e . --no-deps
+
+      - name: Run the data-free test suite
+        run: python -m pytest -q
+
+      - name: Exercise the leaderboard reproduction check
+        run: |
+          # A check run must reproduce the leaderboard it is given, and must
+          # leave that leaderboard untouched.
+          python -m wiring_tuning.harness --synthetic --out-dir "$RUNNER_TEMP/leaderboard" --seeds 0 --epochs 2
+          python -m wiring_tuning.harness --synthetic --check --out-dir "$RUNNER_TEMP/leaderboard" --seeds 0 --epochs 2

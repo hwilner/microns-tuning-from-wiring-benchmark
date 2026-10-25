@@ -79,10 +79,25 @@ def make_synthetic_connectome(
 def degree_preserving_rewire(
     graph: ConnectomeGraph, n_swaps: int | None = None, seed: int = 0
 ) -> ConnectomeGraph:
-    """Degree-preserving topology null: random edge swaps that keep the exact in/out degree sequence but destroy fine connectivity.
+    """Degree-preserving topology null: random edge swaps that destroy fine connectivity.
 
     Uses the double-edge swap: for edges (a->b), (c->d), rewire to
     (a->d), (c->b), skipping self-loops and duplicate edges.
+
+    What the swap preserves, exactly:
+
+    - the *unweighted* in-degree and out-degree count of every node;
+    - the *weighted* out-degree of every node, because the synapse counts
+      travel with their source edge.
+
+    What it does not preserve is the *weighted* in-degree of a node: the two
+    target nodes of a swap exchange their incoming synapse totals, and
+    ``ConnectomeGraph.degree_features()`` consumes the weighted in-degree.
+    The ``degree_mlp`` control baseline therefore sees slightly different
+    features in the null than in the real graph. This is a known limitation
+    of the v1 null, recorded in ``docs/METHODS.md``. A null that also keeps
+    the weighted in-degree would have to restrict the swaps to edges of
+    equal synapse count.
     """
     rng = np.random.default_rng(seed)
     src = graph.edge_index[0].copy()

@@ -31,8 +31,10 @@ def scatter_add(src: torch.Tensor, index: torch.Tensor, dim_size: int) -> torch.
 class MessagePassingLayer(nn.Module):
     """Weighted message passing: h_i <- MLP(h_i || sum_j w_ji * W h_j).
 
-    Messages flow along edges (source -> target), weighted by edge weight,
-    normalized by the square root of in-degree for stability.
+    Messages flow along edges (source -> target), weighted by edge weight.
+    The weights are normalised by the mean edge weight of the graph, so that
+    the scale of the synapse counts does not change the effective step size.
+    They are not normalised by the in-degree.
     """
 
     def __init__(self, in_dim: int, out_dim: int):
