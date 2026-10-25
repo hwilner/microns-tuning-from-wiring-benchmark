@@ -14,6 +14,17 @@ import pytest
 from wiring_tuning import microns
 
 
+@pytest.fixture
+def synthetic_release(monkeypatch):
+    """Accept the in-memory fake release as if it were the published one.
+
+    The loader verifies the release files against `EXPECTED_SHA256`. The fake
+    release used by these tests is not the public release, so it declares no
+    published digest and is therefore digested but not verified.
+    """
+    monkeypatch.setattr(microns, "EXPECTED_SHA256", {})
+
+
 def _fake_release(tmp_path, n=40):
     rng = np.random.default_rng(0)
     nodes = pd.DataFrame(
@@ -67,11 +78,12 @@ def test_build_connectome(tmp_path):
     assert graph.edge_index.max() < graph.num_nodes
 
 
-def test_assemble_and_reload(tmp_path):
+def test_assemble_and_reload(tmp_path, synthetic_release):
     """Test assemble and reload.
 
     Args:
         tmp_path: tmp path.
+        synthetic_release: fake release digests fixture.
     """
     _fake_release(tmp_path)
     manifest = microns.assemble_dataset(tmp_path, seed=7)
@@ -125,3 +137,57 @@ def test_cave_error_message_actionable(monkeypatch):
     except ImportError:
         with pytest.raises(RuntimeError, match="caveclient"):
             microns.try_cave_client()
+
+
+def test_expected_sha256_covers_the_release_files():
+    """The published digests must cover every release file that is fetched."""
+    assert set(microns.EXPECTED_SHA256) == {microns.NODE_FILE, microns.EDGE_FILE}
+    for digest in microns.EXPECTED_SHA256.values():
+        assert len(digest) == 64
+        int(digest, 16)  # must be hexadecimal
+
+
+def test_verify_release_checksums_accepts_a_matching_file(tmp_path, monkeypatch):
+    """A file whose digest matches the published one is accepted.
+
+    Args:
+        tmp_path: tmp path.
+        monkeypatch: monkeypatch.
+    """
+    path = tmp_path / microns.NODE_FILE
+    path.write_bytes(b"release payload")
+    digest = microns.sha256_file(path)
+    monkeypatch.setitem(microns.EXPECTED_SHA256, microns.NODE_FILE, digest)
+
+    digests = microns.verify_release_checksums({microns.NODE_FILE: path})
+
+    assert digests[microns.NODE_FILE] == digest
+
+
+def test_verify_release_checksums_rejects_a_damaged_file(tmp_path):
+    """A file whose digest differs from the published one is rejected.
+
+    Args:
+        tmp_path: tmp path.
+    """
+    path = tmp_path / microns.NODE_FILE
+    path.write_bytes(b"truncated release")
+
+    with pytest.raises(ValueError, match="SHA-256"):
+        microns.verify_release_checksums({microns.NODE_FILE: path})
+
+
+def test_loader_rejects_a_damaged_release(tmp_path):
+    """A damaged release must fail in the loader, not reach dataset assembly.
+
+    Args:
+        tmp_path: tmp path.
+    """
+    raw = tmp_path / "raw"
+    raw.mkdir()
+    (raw / microns.NODE_FILE).write_bytes(b"corrupt")
+    (raw / microns.EDGE_FILE).write_bytes(b"corrupt")
+    (raw / microns.README_FILE).write_bytes(b"corrupt")
+
+    with pytest.raises(ValueError, match="SHA-256"):
+        microns.fetch_functional_connectomics(raw)

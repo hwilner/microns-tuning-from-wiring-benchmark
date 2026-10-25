@@ -145,12 +145,61 @@ def sha256_file(path: str | Path, chunk_mb: int = 8) -> str:
     return h.hexdigest()
 
 
+def verify_release_checksums(paths: dict[str, Path]) -> dict[str, str]:
+    """Verify release files against the published SHA-256 digests.
+
+    The digests in :data:`EXPECTED_SHA256` are the contract between this
+    repository and the public release. A download that is truncated, silently
+    corrupted or served from a stale mirror must not reach the dataset
+    assembly step, because the manifest would then record the digest of the
+    damaged file as if it were the source's.
+
+    Args:
+        paths: mapping of release file name to the local path it was
+            downloaded to. Files that have no published digest are digested
+            but not verified.
+
+    Returns:
+        dict[str, str]: the SHA-256 digest of every file, keyed by file name.
+
+    Raises:
+        ValueError: if a file's digest differs from the published digest.
+    """
+    digests = {name: sha256_file(path) for name, path in paths.items()}
+    for name, digest in digests.items():
+        expected = EXPECTED_SHA256.get(name)
+        if expected is None:
+            continue
+        if digest != expected:
+            raise ValueError(
+                f"{name} failed its SHA-256 check: expected {expected}, got "
+                f"{digest}. The download is damaged or the release changed; "
+                "delete the file and download it again."
+            )
+    return digests
+
+
 def fetch_functional_connectomics(raw_dir: str | Path) -> tuple[Path, Path]:
-    """Download (if needed) the node/edge release files. Returns paths."""
+    """Download (if needed) the node/edge release files. Returns paths.
+
+    The downloaded files are verified against :data:`EXPECTED_SHA256` before
+    they are handed back, so a damaged download fails here rather than
+    silently producing a wrong dataset.
+
+    Args:
+        raw_dir: directory the release files are downloaded into.
+
+    Returns:
+        tuple[Path, Path]: paths of the node and edge release files.
+
+    Raises:
+        ValueError: if a downloaded file fails its SHA-256 check.
+    """
     raw_dir = Path(raw_dir)
     node = download_file(f"{S3_BASE}/{NODE_FILE}", raw_dir / NODE_FILE)
     edge = download_file(f"{S3_BASE}/{EDGE_FILE}", raw_dir / EDGE_FILE)
     download_file(f"{S3_BASE}/{README_FILE}", raw_dir / README_FILE)
+    verify_release_checksums({node.name: node, edge.name: edge})
     return node, edge
 
 

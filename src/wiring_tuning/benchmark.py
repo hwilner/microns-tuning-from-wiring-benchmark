@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 import torch
 
@@ -12,6 +13,12 @@ from .train import split_masks, train_model, evaluate
 
 MODELS = ("gnn", "degree_mlp", "features_mlp", "mean_null")
 
+#: Metrics carried by the long-format results table and its summary.
+SUMMARY_METRICS = ("r2", "pearson")
+
+#: Suffixes of the derived columns in the summary; everything else is a key.
+SUMMARY_SUFFIXES = ("_mean", "_std", "_count", "_ci95")
+
 
 def _fit_predict(
     model_name: str, graph: ConnectomeGraph, y, masks, epochs: int, seed: int
@@ -20,6 +27,11 @@ def _fit_predict(
     if model_name == "mean_null":
         m = MeanBaseline().fit(torch.as_tensor(y, dtype=torch.float32)[train_mask])
         return m.predict(graph.num_nodes)
+    # Seed *before* the model is built. Torch draws parameter initialisation
+    # from its global RNG, and `train_model` only seeds once the model already
+    # exists, so an unseeded build left every run irreproducible: the same
+    # seed produced different predictions on every call.
+    torch.manual_seed(seed)
     if model_name == "gnn":
         model = GNNRegressor(graph.node_features.shape[1])
     elif model_name == "degree_mlp":
@@ -61,13 +73,32 @@ def run_benchmark(
     return pd.DataFrame(rows)
 
 
-def summarize(results: pd.DataFrame) -> pd.DataFrame:
-    """Mean +/- std over seeds per (graph, model)."""
-    return (
-        results.groupby(["graph", "model"])[["r2", "pearson"]]
-        .agg(["mean", "std"])
-        .round(3)
-    )
+def summarize(
+    results: pd.DataFrame, keys: tuple[str, ...] = ("graph", "model")
+) -> pd.DataFrame:
+    """Aggregate a long-format results table into the published summary schema.
+
+    For every group the summary carries the mean, standard deviation, seed
+    count and 95% confidence interval of each metric. The derived columns are
+    flattened to ``<metric>_mean``, ``<metric>_std``, ``<metric>_count`` and
+    ``<metric>_ci95`` so that the real-data run and the data-free synthetic run
+    write the same schema and can be compared column by column.
+
+    Args:
+        results: long-format rows carrying ``r2`` and ``pearson`` columns.
+        keys: columns that identify one leaderboard row.
+
+    Returns:
+        pd.DataFrame: one row per group, rounded to four decimals.
+    """
+    agg = results.groupby(list(keys))[["r2", "pearson"]].agg(["mean", "std", "count"])
+    agg.columns = ["_".join(c) for c in agg.columns]
+    summary = agg.reset_index()
+    for metric in SUMMARY_METRICS:
+        summary[f"{metric}_ci95"] = (
+            1.96 * summary[f"{metric}_std"] / np.sqrt(summary[f"{metric}_count"])
+        )
+    return summary.round(4)
 
 
 def main() -> None:

@@ -9,7 +9,13 @@ Core scientific guarantees:
 4. The degree baseline feature extractor is deterministic.
 """
 
+import os
+import subprocess
+import sys
+from pathlib import Path
+
 import numpy as np
+import pandas as pd
 import torch
 
 from wiring_tuning import (
@@ -22,10 +28,19 @@ from wiring_tuning import (
     train_model,
     evaluate,
 )
+from wiring_tuning.benchmark import _fit_predict, run_benchmark
 from wiring_tuning.models import MeanBaseline
 
 N = 200
 EPOCHS = 120
+
+#: Fixed initialisation seed for the guarantee tests. Torch draws parameter
+#: initialisation from its global RNG, so leaving it to the ambient state made
+#: the suite's core scientific guarantee stochastic: sampling 20 ambient
+#: states failed the assertion in 3 of them, so `pytest` was red roughly one
+#: run in six. The initialisation is held fixed across the data seeds so that
+#: the planted-vs-rewired contrast stays a paired comparison.
+INIT_SEED = 0
 
 
 def _fit_gnn(seed=0, n=N, epochs=EPOCHS, rewired=False):
@@ -33,6 +48,7 @@ def _fit_gnn(seed=0, n=N, epochs=EPOCHS, rewired=False):
     if rewired:
         graph = degree_preserving_rewire(graph, seed=seed)
     train, val, test = split_masks(graph.num_nodes, seed=seed)
+    torch.manual_seed(INIT_SEED)
     model = GNNRegressor(graph.node_features.shape[1], hidden_dim=32)
     train_model(model, graph, y, train, val, epochs=epochs, seed=seed)
     pred = model._cached_pred
@@ -65,6 +81,7 @@ def test_training_loop_smoke():
     """Test training loop smoke."""
     graph, y = make_synthetic_connectome(n_neurons=100, seed=2)
     train, val, _ = split_masks(graph.num_nodes, seed=2)
+    torch.manual_seed(INIT_SEED)
     model = GNNRegressor(graph.node_features.shape[1], hidden_dim=16)
     hist = train_model(model, graph, y, train, val, epochs=20, seed=2)
     assert len(hist["train_loss"]) >= 1
@@ -102,3 +119,66 @@ def test_subgraph_sampling():
     assert sub.num_nodes == 20
     assert sub.node_features.shape[0] == 20
     assert sub.edge_index.max() < 20 if sub.num_edges else True
+
+
+def test_model_initialisation_is_seeded():
+    """Two fits with the same seed must start from identical weights.
+
+    Torch draws parameter initialisation from its global RNG. The seed used
+    to be applied only once the model already existed, so every call fitted a
+    differently initialised network and the benchmark was not reproducible.
+
+    The ambient RNG state is deliberately perturbed before each fit: otherwise
+    a preceding test could leave the RNG seeded and mask the defect.
+    """
+    graph, y = make_synthetic_connectome(n_neurons=60, seed=0)
+    masks = split_masks(graph.num_nodes, seed=0)
+    torch.manual_seed(1234)
+    first = _fit_predict("gnn", graph, y, masks, 5, 0)
+    torch.manual_seed(4321)
+    second = _fit_predict("gnn", graph, y, masks, 5, 0)
+    assert torch.equal(first, second)
+
+
+def test_run_benchmark_is_reproducible_for_a_fixed_seed():
+    """The benchmark must return identical rows when re-run with the same seed.
+
+    This is the property the published leaderboard and `harness --check`
+    depend on: a leaderboard row is only reproducible if the whole run is.
+    The ambient RNG state is perturbed before each run so that the test
+    cannot pass merely because an earlier test left the RNG seeded.
+    """
+    torch.manual_seed(1234)
+    first = run_benchmark(seeds=(0,), n_neurons=60, epochs=5)
+    torch.manual_seed(4321)
+    second = run_benchmark(seeds=(0,), n_neurons=60, epochs=5)
+    pd.testing.assert_frame_equal(first, second)
+
+
+def test_benchmark_reproduces_across_fresh_processes():
+    """Two fresh processes must produce the same leaderboard rows.
+
+    Torch seeds its global RNG nondeterministically at first use, so a model
+    built before the seed is applied gets different weights in every process.
+    This is the property a fresh clone needs in order to reproduce the
+    committed leaderboard.
+    """
+    script = (
+        "from wiring_tuning.benchmark import run_benchmark\n"
+        "print(run_benchmark(seeds=(0,), n_neurons=40, epochs=2)"
+        ".round(6).to_csv(index=False))\n"
+    )
+    env = dict(os.environ)
+    src_dir = str(Path(__file__).resolve().parents[1] / "src")
+    env["PYTHONPATH"] = os.pathsep.join([src_dir, env.get("PYTHONPATH", "")])
+    outputs = [
+        subprocess.run(
+            [sys.executable, "-c", script],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=env,
+        ).stdout
+        for _ in range(2)
+    ]
+    assert outputs[0] == outputs[1]
