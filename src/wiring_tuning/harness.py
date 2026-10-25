@@ -38,7 +38,7 @@ from .benchmark import (
 from .graphs import ConnectomeGraph
 from .microns import assemble_dataset, load_processed_dataset
 from .simulate import degree_preserving_rewire
-from .train import evaluate, split_masks
+from .train import deterministic_kernels, evaluate, split_masks
 
 DEFAULT_PROPERTIES = ("gosi", "osi", "pref_ori")
 
@@ -60,7 +60,29 @@ def run_real_benchmark(
 
     Nodes with undefined labels (NaN) are excluded per property; masks are
     computed on the valid subset. Returns the long-format results table.
+
+    The run uses deterministic torch kernels, so the published leaderboard
+    is reproducible bit-for-bit rather than only to within a tolerance; see
+    `train.py::deterministic_kernels`.
     """
+    # Deterministic kernels: the message-passing scatter-add is
+    # multi-threaded on CPU, so without this the same seed can differ in the
+    # last digits of float32 arithmetic between runs and between machines.
+    with deterministic_kernels():
+        return _run_real_benchmark(
+            graph, labels, properties, seeds, epochs, include_rewired_null
+        )
+
+
+def _run_real_benchmark(
+    graph: ConnectomeGraph,
+    labels: dict[str, np.ndarray],
+    properties: tuple[str, ...],
+    seeds: tuple[int, ...],
+    epochs: int,
+    include_rewired_null: bool,
+) -> pd.DataFrame:
+    """Evaluate every model on every property (see `run_real_benchmark`)."""
     rows = []
     n = graph.num_nodes
     for prop in properties:

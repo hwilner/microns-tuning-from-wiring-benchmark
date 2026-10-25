@@ -9,7 +9,7 @@ import torch
 from .graphs import ConnectomeGraph
 from .models import GNNRegressor, BaselineMLP, DegreeBaseline, MeanBaseline
 from .simulate import make_synthetic_connectome, degree_preserving_rewire
-from .train import split_masks, train_model, evaluate
+from .train import deterministic_kernels, split_masks, train_model, evaluate
 
 MODELS = ("gnn", "degree_mlp", "features_mlp", "mean_null")
 
@@ -56,20 +56,26 @@ def run_benchmark(
     [graph, model, seed, r2, pearson] evaluated on the test mask.
     """
     rows = []
-    for seed in seeds:
-        graph, y = make_synthetic_connectome(n_neurons=n_neurons, seed=seed)
-        masks = split_masks(graph.num_nodes, seed=seed)
-        y_t = torch.as_tensor(y, dtype=torch.float32)
-        variants = [("planted", graph)]
-        if include_rewired_null:
-            variants.append(("rewired_null", degree_preserving_rewire(graph, seed=seed)))
-        for gname, g in variants:
-            for model_name in MODELS:
-                pred = _fit_predict(model_name, g, y, masks, epochs, seed)
-                m = evaluate(pred, y_t, masks[2])
-                rows.append(
-                    {"graph": gname, "model": model_name, "seed": seed, **m}
+    # Deterministic kernels: the message-passing scatter-add is
+    # multi-threaded on CPU, so without this the same seed can differ in the
+    # last digits of float32 arithmetic between runs and between machines.
+    with deterministic_kernels():
+        for seed in seeds:
+            graph, y = make_synthetic_connectome(n_neurons=n_neurons, seed=seed)
+            masks = split_masks(graph.num_nodes, seed=seed)
+            y_t = torch.as_tensor(y, dtype=torch.float32)
+            variants = [("planted", graph)]
+            if include_rewired_null:
+                variants.append(
+                    ("rewired_null", degree_preserving_rewire(graph, seed=seed))
                 )
+            for gname, g in variants:
+                for model_name in MODELS:
+                    pred = _fit_predict(model_name, g, y, masks, epochs, seed)
+                    m = evaluate(pred, y_t, masks[2])
+                    rows.append(
+                        {"graph": gname, "model": model_name, "seed": seed, **m}
+                    )
     return pd.DataFrame(rows)
 
 

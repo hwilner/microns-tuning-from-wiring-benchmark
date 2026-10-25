@@ -44,14 +44,22 @@ INIT_SEED = 0
 
 
 def _fit_gnn(seed=0, n=N, epochs=EPOCHS, rewired=False):
+    from wiring_tuning.train import deterministic_kernels
+
     graph, y = make_synthetic_connectome(n_neurons=n, seed=seed)
     if rewired:
         graph = degree_preserving_rewire(graph, seed=seed)
     train, val, test = split_masks(graph.num_nodes, seed=seed)
-    torch.manual_seed(INIT_SEED)
-    model = GNNRegressor(graph.node_features.shape[1], hidden_dim=32)
-    train_model(model, graph, y, train, val, epochs=epochs, seed=seed)
-    pred = model._cached_pred
+    # Deterministic kernels and a pinned initialisation: without them the
+    # guarantee below was stochastic, and sampling the ambient RNG showed 3
+    # of 20 states failing it, which made `pytest` red roughly one run in
+    # six. The initialisation is held fixed across the data seeds so that
+    # the planted-vs-rewired contrast stays a paired comparison.
+    with deterministic_kernels():
+        torch.manual_seed(INIT_SEED)
+        model = GNNRegressor(graph.node_features.shape[1], hidden_dim=32)
+        train_model(model, graph, y, train, val, epochs=epochs, seed=seed)
+        pred = model._cached_pred
     y_t = torch.as_tensor(y, dtype=torch.float32)
     return graph, y_t, pred, (train, val, test)
 
@@ -129,14 +137,20 @@ def test_model_initialisation_is_seeded():
     differently initialised network and the benchmark was not reproducible.
 
     The ambient RNG state is deliberately perturbed before each fit: otherwise
-    a preceding test could leave the RNG seeded and mask the defect.
+    a preceding test could leave the RNG seeded and mask the defect. The
+    comparison runs under deterministic kernels, because the message-passing
+    scatter-add is multi-threaded on CPU and would otherwise add float32
+    noise of its own.
     """
+    from wiring_tuning.train import deterministic_kernels
+
     graph, y = make_synthetic_connectome(n_neurons=60, seed=0)
     masks = split_masks(graph.num_nodes, seed=0)
-    torch.manual_seed(1234)
-    first = _fit_predict("gnn", graph, y, masks, 5, 0)
-    torch.manual_seed(4321)
-    second = _fit_predict("gnn", graph, y, masks, 5, 0)
+    with deterministic_kernels():
+        torch.manual_seed(1234)
+        first = _fit_predict("gnn", graph, y, masks, 5, 0)
+        torch.manual_seed(4321)
+        second = _fit_predict("gnn", graph, y, masks, 5, 0)
     assert torch.equal(first, second)
 
 
@@ -160,13 +174,15 @@ def test_benchmark_reproduces_across_fresh_processes():
 
     Torch seeds its global RNG nondeterministically at first use, so a model
     built before the seed is applied gets different weights in every process.
-    This is the property a fresh clone needs in order to reproduce the
-    committed leaderboard.
+    On top of that the message-passing scatter-add is multi-threaded on CPU,
+    so the summation order can differ between machines with a different core
+    count. This is the property a fresh clone needs in order to reproduce the
+    committed leaderboard, so the two outputs are compared at full precision.
     """
     script = (
         "from wiring_tuning.benchmark import run_benchmark\n"
         "print(run_benchmark(seeds=(0,), n_neurons=40, epochs=2)"
-        ".round(6).to_csv(index=False))\n"
+        ".to_csv(index=False))\n"
     )
     env = dict(os.environ)
     src_dir = str(Path(__file__).resolve().parents[1] / "src")
@@ -182,6 +198,16 @@ def test_benchmark_reproduces_across_fresh_processes():
         for _ in range(2)
     ]
     assert outputs[0] == outputs[1]
+
+
+def test_deterministic_kernels_are_restored_after_a_run():
+    """The benchmark enables deterministic kernels and restores the setting."""
+    from wiring_tuning.train import deterministic_kernels
+
+    before = torch.are_deterministic_algorithms_enabled()
+    with deterministic_kernels():
+        assert torch.are_deterministic_algorithms_enabled()
+    assert torch.are_deterministic_algorithms_enabled() == before
 
 
 def test_rewire_preserves_the_degree_statistics_the_baseline_consumes():
