@@ -2,10 +2,35 @@
 
 from __future__ import annotations
 
+import contextlib
+
 import numpy as np
 import torch
 
 from .models import GNNRegressor, BaselineMLP, DegreeBaseline
+
+
+@contextlib.contextmanager
+def deterministic_kernels():
+    """Run the enclosed block with deterministic torch kernels.
+
+    The GNN's message passing accumulates over edges with a scatter-add. On
+    CPU that accumulation is multi-threaded, so the summation order -- and
+    with it the last digits of the float32 result -- can differ between runs
+    and between machines with a different core count. Deterministic kernels
+    make a benchmark run reproducible bit-for-bit, which is what a published
+    leaderboard needs. Every tensor in this package lives on the CPU, where
+    these kernels have deterministic implementations.
+
+    Yields:
+        None: inside the context the torch kernels are deterministic.
+    """
+    previous = torch.are_deterministic_algorithms_enabled()
+    torch.use_deterministic_algorithms(True)
+    try:
+        yield
+    finally:
+        torch.use_deterministic_algorithms(previous)
 
 
 def split_masks(

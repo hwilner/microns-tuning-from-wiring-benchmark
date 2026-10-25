@@ -10,12 +10,12 @@ The following are implemented, tested, and reproducible today:
 
 | Component | What it is | Where |
 |---|---|---|
-| Public-mirror loader | Anonymous S3 download (parallel range requests) of the MICrONS functional-connectomics release, with SHA-256 checksum verification in the manifest | `src/wiring_tuning/microns.py` |
+| Public-mirror loader | Anonymous S3 download (parallel range requests) of the MICrONS functional-connectomics release, verified against the published SHA-256 digests before use, with the digests also recorded in the manifest | `src/wiring_tuning/microns.py` |
 | Dataset assembly | 12,894 coregistered neurons (V1/RL/AL/LM; L2/3–L5), 8,128 directed edges (`n_synapses >= 1`, weight = synapse count), fixed 60/20/20 node splits by nucleus ID | `microns.py::assemble_dataset`, `data/` |
 | Models | Pure-PyTorch message-passing GNN (2 layers, hidden 64) plus three baselines: `features_mlp`, `degree_mlp`, `mean_null` | `src/wiring_tuning/models.py` |
 | Null control | Degree-preserving double-edge rewiring of the real graph (10 swaps/edge) | `simulate.py::degree_preserving_rewire` |
 | Benchmark | 3 seeds (0, 1, 2), test-set R² and Pearson per (property, graph, model, seed), 95% CIs across seeds | `harness.py`, `train.py` |
-| One-command harness | `python -m wiring_tuning.harness` regenerates `reports/leaderboard_summary.csv`; `--check` verifies the committed leaderboard reproduces; `--synthetic` runs data-free | `src/wiring_tuning/harness.py` |
+| One-command harness | `python -m wiring_tuning.harness` regenerates `reports/leaderboard_summary.csv`; `--check` re-runs the benchmark and compares it against the committed table without touching it; `--synthetic` runs data-free | `src/wiring_tuning/harness.py` |
 | Real results | features_mlp R² ≈ 0.06 > GNN R² ≈ 0.04; GNN unchanged on the rewired null (ΔR² ≈ 0.001); honest negative result at ~1.3 edges/neuron | `reports/leaderboard_summary.csv` |
 
 ## Intended
@@ -44,7 +44,7 @@ flowchart TB
 
 ### Why a degree-preserving rewired null is THE critical control
 
-Suppose the GNN beats a simple baseline on the real graph. Does that prove *wiring* matters? Not yet. The GNN also sees each neuron's **degree** (how many synapses it sends and receives), and degree alone might carry all the signal — e.g., highly connected neurons might tend to sit in certain layers. A **degree-preserving rewiring** shuffles the edges randomly while keeping every neuron's in-degree and out-degree exactly fixed. It destroys *which* neuron connects to *which* while retaining all per-node connectivity statistics.
+Suppose the GNN beats a simple baseline on the real graph. Does that prove *wiring* matters? Not yet. The GNN also sees each neuron's **degree** (how many synapses it sends and receives), and degree alone might carry all the signal — e.g., highly connected neurons might tend to sit in certain layers. A **degree-preserving rewiring** shuffles the edges randomly while keeping every neuron's degree fixed. It destroys *which* neuron connects to *which* while retaining the per-node connectivity statistics.
 
 The logic is a clean subtraction:
 
@@ -52,6 +52,22 @@ The logic is a clean subtraction:
 - GNN(real) − features_mlp = the value of the graph beyond position/area/layer features.
 
 In the v1 results both differences are ≈ 0 (ΔR² ≈ 0.001 real vs. rewired; GNN below features_mlp), which is exactly why we conclude wiring adds no *measurable* signal at this edge sparsity — rather than merely failing to find one. Without the null, we could not distinguish "wiring is uninformative" from "our model is bad".
+
+**Known limitation of the v1 null (stated precisely).** The double-edge
+swap keeps the *unweighted* in-degree and out-degree count of every neuron
+exactly, and the *weighted* out-degree exactly, because the synapse counts
+travel with their source edge. It does **not** keep the weighted in-degree:
+the two target neurons of a swap exchange their incoming synapse totals.
+`ConnectomeGraph.degree_features()` consumes the weighted in-degree, so the
+`degree_mlp` control baseline sees slightly different features in the null
+than in the real graph — visible directly in the committed leaderboard, where
+the `degree_mlp` rows differ between the `microns` and
+`microns_rewired_null` variants. The null is therefore an exact control for
+the unweighted degree and the weighted out-degree, but not for the weighted
+in-degree. A null that also fixed the weighted in-degree would have to
+restrict the swaps to edges of equal synapse count; that is a v2 change to
+the analysis protocol and is deliberately not made here. The v1 conclusion is
+reported against the null as it was actually run.
 
 ### Why a features_mlp baseline
 
@@ -70,6 +86,35 @@ Neural network training is stochastic: random weight initialization and (implici
 ### Why early stopping
 
 **Overfitting** is when a model memorizes the training data instead of learning general patterns — training loss keeps dropping while performance on unseen data gets worse. We combat it by monitoring validation loss every epoch and stopping when it has not improved for 30 epochs (`patience = 30`), then restoring the best-seen weights. This uses the val split as a stand-in for "unseen data", keeping the test split pure for final reporting.
+
+### Why a run is reproducible
+
+A published leaderboard row is only meaningful if a fresh run reproduces it.
+Three things make that true here, and all three were checked explicitly:
+
+- **Every model is initialised from a seeded RNG.** Torch draws parameter
+  initialisation from its global RNG, so `benchmark.py::_fit_predict` seeds
+  torch *before* each model is built, not only before training it. Within a
+  seed, all four models therefore start from the same seed-specific random
+  state, which is what makes the per-seed scores genuinely paired (see
+  "Paired comparison across seeds") and what makes two runs of the same
+  seed identical.
+- **The benchmark runs with deterministic kernels.** The GNN's message
+  passing accumulates over edges with a scatter-add, which is multi-threaded
+  on CPU, so the summation order — and with it the last digits of the
+  float32 result — can differ between runs and between machines with a
+  different core count. `train.py::deterministic_kernels` asks torch for
+  deterministic kernels around every benchmark run; with them, two fresh
+  processes produce byte-identical leaderboards.
+- **The downloaded release is verified.** `microns.py::verify_release_checksums`
+  checks the release files against the published SHA-256 digests, so a
+  truncated or corrupted download fails loudly instead of producing a quiet
+  wrong dataset.
+
+`python -m wiring_tuning.harness --check` ties the two together: it re-runs
+the benchmark and compares the result against the committed
+`reports/leaderboard_summary.csv` **without modifying it**, exiting non-zero
+on any disagreement.
 
 ---
 

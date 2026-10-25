@@ -72,6 +72,9 @@ to find signal.
 | Draft manuscript outline for Paper 1 | Open | issue #8 (Depends on #6, #7) |
 | Assemble results package and manuscript outline | Open (umbrella) | issue #1 (Depends on #6, #7, #8) |
 | Reproducibility re-run of Paper 1 results | Open | issue #9 (Depends on #1) |
+| Make the benchmark reproducible and verify the downloaded release | **Done**: seeded model initialisation, SHA-256 verification of the release | issue #10 (closed) |
+| Make `harness --check` verify the committed leaderboard without destroying it | **Done**: read-only, non-vacuous reproduction check | issue #11 (closed) |
+| Align the documentation with the code and add CI | **Done**: null-model contract documented, CI runs the suite and the check | issue #12 (closed) |
 
 ## Use and validation
 
@@ -80,12 +83,13 @@ pip install -e ".[dev]"
 python -m pytest -q                          # data-free tests
 python -m wiring_tuning.benchmark            # synthetic benchmark
 python -m wiring_tuning.harness              # real MICrONS benchmark (downloads ~500 MB once)
-python -m wiring_tuning.harness --check      # verify committed leaderboard reproduces
+python -m wiring_tuning.harness --check      # verify the committed leaderboard reproduces (read-only)
 ```
 
-Latest validation (2026-10-25, `main` @ 96644c5): 10/10 data-free tests pass
-(Python 3.12, CPU, torch 2.8.0); committed summary table recomputes exactly
-from committed per-seed data; details in `docs/RESULTS.md` Table 5.
+Latest validation (2026-10-25): 24/24 data-free tests pass (Python 3.11, CPU,
+torch 2.14.1); the committed leaderboard was regenerated from the public
+MICrONS release and reproduces from a fresh run; details in
+`docs/RESULTS.md` Table 5.
 
 ## Keywords
 

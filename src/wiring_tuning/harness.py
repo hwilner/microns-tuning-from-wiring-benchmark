@@ -2,8 +2,12 @@
 
 Usage:
 python -m wiring_tuning.harness                # full run (downloads data)
-python -m wiring_tuning.harness --check        # reproduce + diff vs reports/
+python -m wiring_tuning.harness --check        # verify against reports/, read-only
 python -m wiring_tuning.harness --synthetic    # data-free synthetic run
+
+``--check`` never writes to the output directory: it reads the committed
+``leaderboard_summary.csv`` as the baseline, runs the benchmark into a scratch
+directory and compares the two. It exits non-zero when they disagree.
 
 Outputs (default ``reports/``):
 leaderboard.csv           long-format per-(property, graph, model, seed)
@@ -15,6 +19,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
+import tempfile
 import time
 from pathlib import Path
 
@@ -22,11 +28,17 @@ import numpy as np
 import pandas as pd
 import torch
 
-from .benchmark import MODELS, _fit_predict, summarize
+from .benchmark import (
+    MODELS,
+    SUMMARY_SUFFIXES,
+    _fit_predict,
+    run_benchmark,
+    summarize,
+)
 from .graphs import ConnectomeGraph
 from .microns import assemble_dataset, load_processed_dataset
 from .simulate import degree_preserving_rewire
-from .train import evaluate, split_masks
+from .train import deterministic_kernels, evaluate, split_masks
 
 DEFAULT_PROPERTIES = ("gosi", "osi", "pref_ori")
 
@@ -48,7 +60,29 @@ def run_real_benchmark(
 
     Nodes with undefined labels (NaN) are excluded per property; masks are
     computed on the valid subset. Returns the long-format results table.
+
+    The run uses deterministic torch kernels, so the published leaderboard
+    is reproducible bit-for-bit rather than only to within a tolerance; see
+    `train.py::deterministic_kernels`.
     """
+    # Deterministic kernels: the message-passing scatter-add is
+    # multi-threaded on CPU, so without this the same seed can differ in the
+    # last digits of float32 arithmetic between runs and between machines.
+    with deterministic_kernels():
+        return _run_real_benchmark(
+            graph, labels, properties, seeds, epochs, include_rewired_null
+        )
+
+
+def _run_real_benchmark(
+    graph: ConnectomeGraph,
+    labels: dict[str, np.ndarray],
+    properties: tuple[str, ...],
+    seeds: tuple[int, ...],
+    epochs: int,
+    include_rewired_null: bool,
+) -> pd.DataFrame:
+    """Evaluate every model on every property (see `run_real_benchmark`)."""
     rows = []
     n = graph.num_nodes
     for prop in properties:
@@ -102,6 +136,57 @@ def run_real_benchmark(
     return pd.DataFrame(rows)
 
 
+def _compare_summaries(
+    fresh: pd.DataFrame, baseline: pd.DataFrame, atol: float = 5e-3
+) -> tuple[bool, str]:
+    """Compare a freshly computed summary against a committed baseline.
+
+    The two frames are matched on their key columns (every column that is not
+    a derived metric) and the shared metric columns are compared elementwise.
+    A baseline produced in a different mode -- for example the real-data table
+    compared against a synthetic run -- has no comparable rows and is reported
+    as such rather than silently passing.
+
+    Args:
+        fresh: summary produced by the current run.
+        baseline: summary read from the committed artifact.
+        atol: absolute tolerance for the comparison.
+
+    Returns:
+        tuple[bool, str]: whether the two summaries agree, and a
+        human-readable description of what was compared.
+    """
+    key_cols = [c for c in fresh.columns if not c.endswith(SUMMARY_SUFFIXES)]
+    metric_cols = [c for c in fresh.columns if c.endswith(SUMMARY_SUFFIXES)]
+    baseline_key_cols = [
+        c for c in baseline.columns if not c.endswith(SUMMARY_SUFFIXES)
+    ]
+    if set(key_cols) != set(baseline_key_cols):
+        return False, (
+            f"the committed baseline is keyed by {baseline_key_cols} but this "
+            f"run is keyed by {key_cols}, so it was produced in a different "
+            "mode and cannot be compared"
+        )
+    merged = fresh.merge(baseline, on=key_cols, how="inner", suffixes=("_new", "_ref"))
+    if merged.empty:
+        return False, (
+            "the committed baseline shares no row with the fresh run "
+            f"(keys {key_cols})"
+        )
+    for col in metric_cols:
+        if col not in baseline.columns:
+            return False, f"the committed baseline has no {col} column"
+        new = merged[f"{col}_new"].to_numpy(dtype=float)
+        ref = merged[f"{col}_ref"].to_numpy(dtype=float)
+        if not np.allclose(new, ref, atol=atol, equal_nan=True):
+            worst = float(np.nanmax(np.abs(new - ref)))
+            return False, (
+                f"{col} differs from the committed baseline on {len(merged)} "
+                f"compared rows (largest difference {worst:.6g})"
+            )
+    return True, f"{len(merged)} rows compared"
+
+
 def main() -> None:
     """Main."""
     ap = argparse.ArgumentParser(description=__doc__)
@@ -121,80 +206,80 @@ def main() -> None:
     args = ap.parse_args()
 
     out_dir = Path(args.out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
     seeds = tuple(int(s) for s in args.seeds.split(","))
     properties = tuple(p.strip() for p in args.properties.split(","))
 
-    if args.synthetic:
-        from .benchmark import run_benchmark
-        results = run_benchmark(seeds=seeds, epochs=args.epochs)
-        summary = summarize(results).reset_index()
-        meta = {"mode": "synthetic", "seeds": seeds}
-    else:
-        processed = Path(args.data_dir) / "processed"
-        if not (processed / "graph.npz").exists():
-            print("assembling dataset from MICrONS release ...")
-            manifest = assemble_dataset(
-                args.data_dir, min_synapses=args.min_synapses
-            )
-            print(json.dumps(manifest["qc"], indent=2))
-        graph, labels, _ = load_processed_dataset(processed)
-        t0 = time.time()
-        results = run_real_benchmark(
-            graph, labels, properties=properties, seeds=seeds, epochs=args.epochs
-        )
-        meta = {
-            "mode": "real",
-            "seeds": seeds,
-            "epochs": args.epochs,
-            "properties": properties,
-            "n_nodes": graph.num_nodes,
-            "n_edges": graph.num_edges,
-            "runtime_s": round(time.time() - t0, 1),
-        }
-        with open(processed / "manifest.json") as fh:
-            meta["dataset_manifest"] = json.load(fh)
-        # per-property summary with 95% CI across seeds
-        keys = ["property", "graph", "model"]
-        agg = results.groupby(keys)[["r2", "pearson"]].agg(["mean", "std", "count"])
-        agg.columns = ["_".join(c) for c in agg.columns]
-        summary = agg.reset_index()
-        for m in ("r2", "pearson"):
-            summary[f"{m}_ci95"] = (
-                1.96 * summary[f"{m}_std"] / np.sqrt(summary[f"{m}_count"])
-            )
-        summary = summary.round(4)
-    results.to_csv(out_dir / "leaderboard.csv", index=False)
-    summary.to_csv(out_dir / "leaderboard_summary.csv", index=False)
-    with open(out_dir / "leaderboard_meta.json", "w") as fh:
-        json.dump(meta, fh, indent=2)
-    print(summary.to_string(index=False))
-    print(f"\nwrote {out_dir}/leaderboard.csv, leaderboard_summary.csv, leaderboard_meta.json")
-
+    # A --check run verifies the committed artifacts and must leave them
+    # untouched: the baseline is read before anything is written and the fresh
+    # run is materialised in a scratch directory. Writing the fresh run over
+    # the baseline first (as this used to do) made the check compare the run
+    # against itself, so it could never fail, and the committed leaderboard
+    # was destroyed by the very command meant to verify it.
+    baseline = None
+    scratch_dir = None
     if args.check:
-        # recompute summary from the committed long-format results and
-        # require exact agreement with the committed summary table
-        ref_results = pd.read_csv(out_dir / "leaderboard.csv")
-        if "property" in ref_results.columns:
-            keys = ["property", "graph", "model"]
-        else:
-            keys = ["graph", "model"]
-        agg = ref_results.groupby(keys)[["r2", "pearson"]].agg(["mean", "std", "count"])
-        agg.columns = ["_".join(c) for c in agg.columns]
-        ref_summary = agg.reset_index()
-        for m in ("r2", "pearson"):
-            ref_summary[f"{m}_ci95"] = (
-                1.96 * ref_summary[f"{m}_std"] / np.sqrt(ref_summary[f"{m}_count"])
-            )
-        committed = pd.read_csv(out_dir / "leaderboard_summary.csv")
-        same = np.allclose(
-            ref_summary[["r2_mean", "pearson_mean"]].to_numpy(),
-            committed[["r2_mean", "pearson_mean"]].to_numpy(),
-            atol=5e-3,
-        )
-        print("reproduction check:", "PASS" if same else "MISMATCH")
-        if not same:
+        baseline_path = out_dir / "leaderboard_summary.csv"
+        if not baseline_path.exists():
+            print(f"reproduction check: no committed baseline at {baseline_path}")
             raise SystemExit(1)
+        baseline = pd.read_csv(baseline_path)
+        scratch_dir = Path(tempfile.mkdtemp(prefix="wiring-tuning-check-"))
+        write_dir = scratch_dir
+    else:
+        write_dir = out_dir
+        write_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        if args.synthetic:
+            results = run_benchmark(seeds=seeds, epochs=args.epochs)
+            summary = summarize(results)
+            meta = {"mode": "synthetic", "seeds": seeds}
+        else:
+            processed = Path(args.data_dir) / "processed"
+            if not (processed / "graph.npz").exists():
+                print("assembling dataset from MICrONS release ...")
+                manifest = assemble_dataset(
+                    args.data_dir, min_synapses=args.min_synapses
+                )
+                print(json.dumps(manifest["qc"], indent=2))
+            graph, labels, _ = load_processed_dataset(processed)
+            t0 = time.time()
+            results = run_real_benchmark(
+                graph, labels, properties=properties, seeds=seeds, epochs=args.epochs
+            )
+            meta = {
+                "mode": "real",
+                "seeds": seeds,
+                "epochs": args.epochs,
+                "properties": properties,
+                "n_nodes": graph.num_nodes,
+                "n_edges": graph.num_edges,
+                "runtime_s": round(time.time() - t0, 1),
+            }
+            with open(processed / "manifest.json") as fh:
+                meta["dataset_manifest"] = json.load(fh)
+            summary = summarize(results, keys=("property", "graph", "model"))
+        results.to_csv(write_dir / "leaderboard.csv", index=False)
+        summary.to_csv(write_dir / "leaderboard_summary.csv", index=False)
+        with open(write_dir / "leaderboard_meta.json", "w") as fh:
+            json.dump(meta, fh, indent=2)
+        print(summary.to_string(index=False))
+        print(
+            f"\nwrote {write_dir}/leaderboard.csv, "
+            f"{write_dir}/leaderboard_summary.csv, "
+            f"{write_dir}/leaderboard_meta.json"
+        )
+
+        if args.check:
+            same, detail = _compare_summaries(summary, baseline)
+            print(
+                "reproduction check:", "PASS" if same else "MISMATCH", f"({detail})"
+            )
+            if not same:
+                raise SystemExit(1)
+    finally:
+        if scratch_dir is not None:
+            shutil.rmtree(scratch_dir, ignore_errors=True)
 
 
 if __name__ == "__main__":
