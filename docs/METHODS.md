@@ -90,7 +90,7 @@ Neural network training is stochastic: random weight initialization and (implici
 ### Why a run is reproducible
 
 A published leaderboard row is only meaningful if a fresh run reproduces it.
-Two things make that true here, and both were checked explicitly:
+Three things make that true here, and all three were checked explicitly:
 
 - **Every model is initialised from a seeded RNG.** Torch draws parameter
   initialisation from its global RNG, so `benchmark.py::_fit_predict` seeds
@@ -99,6 +99,13 @@ Two things make that true here, and both were checked explicitly:
   state, which is what makes the per-seed scores genuinely paired (see
   "Paired comparison across seeds") and what makes two runs of the same
   seed identical.
+- **The benchmark runs with deterministic kernels.** The GNN's message
+  passing accumulates over edges with a scatter-add, which is multi-threaded
+  on CPU, so the summation order — and with it the last digits of the
+  float32 result — can differ between runs and between machines with a
+  different core count. `train.py::deterministic_kernels` asks torch for
+  deterministic kernels around every benchmark run; with them, two fresh
+  processes produce byte-identical leaderboards.
 - **The downloaded release is verified.** `microns.py::verify_release_checksums`
   checks the release files against the published SHA-256 digests, so a
   truncated or corrupted download fails loudly instead of producing a quiet

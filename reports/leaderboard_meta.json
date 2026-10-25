@@ -1,11 +1,19 @@
 {
   "mode": "real",
-  "seeds": [0, 1, 2],
+  "seeds": [
+    0,
+    1,
+    2
+  ],
   "epochs": 150,
-  "properties": ["gosi", "osi", "pref_ori"],
+  "properties": [
+    "gosi",
+    "osi",
+    "pref_ori"
+  ],
   "n_nodes": 12894,
   "n_edges": 8128,
-  "runtime_s": 217.5,
+  "runtime_s": 347.6,
   "dataset_manifest": {
     "source": {
       "name": "MICrONS functional connectomics release (Ding et al. 2025)",
@@ -22,12 +30,28 @@
     "n_edges": 8128,
     "min_synapses": 1,
     "cc_norm_min": 0.0,
-    "labels": ["gosi", "osi", "pref_ori", "gosi_invivo", "osi_invivo", "pref_ori_invivo"],
+    "labels": [
+      "gosi",
+      "osi",
+      "pref_ori",
+      "gosi_invivo",
+      "osi_invivo",
+      "pref_ori_invivo"
+    ],
     "qc": {
       "cc_norm_cvt_median": 0.6608751316041606,
       "frac_nodes_with_gosi": 1.0,
-      "brain_areas": ["AL", "LM", "RL", "V1"],
-      "layers": ["L2/3", "L4", "L5"]
+      "brain_areas": [
+        "AL",
+        "LM",
+        "RL",
+        "V1"
+      ],
+      "layers": [
+        "L2/3",
+        "L4",
+        "L5"
+      ]
     },
     "split_seed": 0
   }
