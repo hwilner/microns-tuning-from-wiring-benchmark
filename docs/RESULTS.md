@@ -3,8 +3,13 @@
 This document collects the benchmark's results in paper style: captioned
 tables and figures with full provenance. Tables 1–3 are **completed** from the
 committed leaderboard (`reports/leaderboard_summary.csv`,
-`reports/leaderboard_meta.json`); Table 4 and Figures 1–2 are pre-registered
-placeholders whose production is tracked by GitHub issues. Table 5 records
+`reports/leaderboard_meta.json`). The pre-registered Paper 1 results package
+(Table 4) is **produced**: Paper Tables 1–3 and Figures 1–2 regenerate
+deterministically from the committed artifacts via
+`python -m wiring_tuning.tables.make_all` and
+`python -m wiring_tuning.figures.make_all` (issues #6, #7, closed
+2026-11-16), and the manuscript outline is committed as
+`docs/MANUSCRIPT_OUTLINE.md` (issue #8, closed 2026-11-16). Table 5 records
 this repository's validation history (test-suite re-runs).
 
 ## Completed results (real MICrONS data, benchmark v1)
@@ -93,22 +98,28 @@ uses deterministic torch kernels, so a run is reproducible bit-for-bit (see
 scores moved by at most 0.0018 in R² and 0.0055 in Pearson relative to the
 previous, non-reproducible run. The conclusion is unchanged.
 
-## Pre-registered results package (placeholders — production tracked by issues)
+## Results package (produced 2026-11-16 from the committed artifacts)
 
-**Table 4. Paper 1 results-package tables and their authorizing issues.**
-Placeholder rows marked *TBD* are populated only when the linked issue
-closes; no numbers may be entered before the corresponding analysis is run.
+**Table 4. Paper 1 results-package tables and figures.** Every asset
+regenerates deterministically from the committed artifacts with a single
+command (`python -m wiring_tuning.tables.make_all`,
+`python -m wiring_tuning.figures.make_all`); byte-parity is enforced by
+`tests/test_tables.py` and `tests/test_figures.py`. Figure 1's label
+distributions are pre-binned in `reports/figure1_label_distributions.csv`,
+derived from the SHA-256-verified MICrONS release node table (provenance in
+the companion `.meta.json`), so figure regeneration never needs the 295 MB
+release file.
 
-| Planned table/figure | Contents | Authorized by | Status |
+| Table/figure | Contents | Authorized by | Status |
 |---|---|---|---|
-| Paper Table 1 | Dataset assembly + QC (extends Table 1 above) | issue #7 (Depends on #5, closed) | *TBD* |
-| Paper Table 2 | Full leaderboard incl. per-seed long format | issue #7 (Depends on #3, closed) | *TBD* — source data already in `reports/` |
-| Paper Table 3 | Null-model comparisons incl. paired per-seed deltas | issue #7 (Depends on #2, closed) | *TBD* — per-seed data in `reports/leaderboard.csv` |
-| Figure 1 | Graph/sparsity schematic + label distributions | issue #6 (Depends on #5, closed) | *TBD* |
-| Figure 2 | Leaderboard bar chart with CIs + real-vs-rewired deltas | issue #6 (Depends on #3, closed) | *TBD* |
-| Manuscript outline | Intro/methods/results skeleton citing Tables 1–3 | issue #8 (Depends on #6, #7) | *TBD* |
-| Umbrella: results package | Assemble tables+figures+outline into Paper 1 package | issue #1 (Depends on #6, #7, #8) | open |
-| Reproducibility re-run | Fresh-environment `harness --check` + test suite | issue #9 (Depends on #1) | open — first re-run recorded in Table 5 |
+| Paper Table 1 | Dataset assembly + QC (extends Table 1 above) | issue #7 | **Done** — `reports/tables/paper_table1_dataset_summary.{csv,md,tex}` |
+| Paper Table 2 | Full leaderboard incl. per-seed long format | issue #7 | **Done** — `reports/tables/paper_table2_leaderboard.*` + `paper_table2_per_seed.*` |
+| Paper Table 3 | Null-model comparisons incl. paired per-seed deltas | issue #7 | **Done** — `reports/tables/paper_table3_null_comparison.*` |
+| Figure 1 | Graph/sparsity schematic + label distributions | issue #6 | **Done** — `reports/figures/figure1_dataset_overview.svg` |
+| Figure 2 | Leaderboard bar chart with CIs + real-vs-rewired deltas | issue #6 | **Done** — `reports/figures/figure2_leaderboard.svg` |
+| Manuscript outline | Intro/methods/results skeleton citing Tables 1–3 | issue #8 | **Done** — `docs/MANUSCRIPT_OUTLINE.md` |
+| Umbrella: results package | Assemble tables+figures+outline into Paper 1 package | issue #1 | all children done — awaiting scientific-owner review |
+| Reproducibility re-run | Fresh-environment `harness --check` + test suite | issue #9 | open — first re-run recorded in Table 5 |
 
 ## Validation record
 
@@ -127,6 +138,7 @@ stated ref before execution.
 | 2026-10-25 | `chore/daily-2026-10-25-microns-tuning-from-wiring-benchmark` | Real-data harness: full leaderboard re-derivation on the public MICrONS release (seeds 0–2, 150 epochs) | **PASS** — dataset reproduced bit-identically (12,894 neurons, 8,128 edges, identical manifest and SHA-256 digests); leaderboard regenerated | Python 3.11, CPU (2 threads), numpy 2.4.6, pandas 3.1.0, torch 2.14.1 | Release files verified against `EXPECTED_SHA256` before use; training run 375.9 s; the committed `reports/` are this run's output |
 | 2026-10-25 | `chore/daily-2026-10-25-microns-tuning-from-wiring-benchmark` | `harness --check` against the regenerated committed leaderboard | **PASS (24 rows compared)**, exit 0; the committed `reports/leaderboard.csv` and `leaderboard_summary.csv` were byte-identical before and after | same as above | The check now compares against the committed baseline instead of against itself, and leaves the baseline untouched |
 | 2026-10-25 | `chore/daily-2026-10-25-microns-tuning-from-wiring-benchmark` | Full suite (25 tests), including the new determinism, release-checksum and reproduction-check tests | **25 pass / 0 fail**; 5 consecutive fresh processes all green | Python 3.11, CPU, numpy 2.4.6, pandas 3.1.0, torch 2.14.1 | Run against the unpatched source the same suite fails 15 of 25, so the new checks are provably able to fail |
+| 2026-11-16 | `chore/paper-readiness` run (issues #6, #7, #8) | Full suite (34 tests) incl. new table/figure determinism and integrity tests; `tables.make_all` + `figures.make_all` regenerated byte-identical outputs across processes (incl. different `PYTHONHASHSEED`); label distributions derived from the SHA-256-verified release node table | **34 pass / 0 fail**, 16.3 s wall | Python 3.12.12, CPU, numpy 2.2.5, pandas 2.3.2, matplotlib 3.10.3, torch 2.8.0 | Paper 1 results package produced; no benchmark metric changed (tables/figures re-format committed artifacts only). Figures are SVG because the push channel used by automation is text-only; vector output is also preferable for the manuscript. |
 
 **Leaderboard internal-consistency check (2026-10-25).** Recomputing
 mean/std/95% CI per (property, graph, model) from the committed long-format
