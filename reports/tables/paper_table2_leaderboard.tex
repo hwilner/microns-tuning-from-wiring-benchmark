@@ -1,0 +1,23 @@
+\begin{table}[htbp]
+  \centering
+  \caption{Benchmark leaderboard on the real MICrONS graph; test-set mean $\pm$ 95\% CI across seeds 0-2.}
+  \label{tab:leaderboard}
+  \begin{tabular}{llll}
+    \toprule
+    Property & Model & R² (mean $\pm$ 95\% CI) & Pearson (mean $\pm$ 95\% CI) \\
+    \midrule
+    gosi & features\_mlp & 0.060 $\pm$ 0.015 & 0.247 $\pm$ 0.028 \\
+    gosi & gnn & 0.043 $\pm$ 0.007 & 0.211 $\pm$ 0.015 \\
+    gosi & degree\_mlp & -0.010 $\pm$ 0.002 & -0.021 $\pm$ 0.012 \\
+    gosi & mean\_null & -0.000 $\pm$ 0.001 & 0.000 $\pm$ 0.000 \\
+    osi & features\_mlp & 0.060 $\pm$ 0.013 & 0.247 $\pm$ 0.025 \\
+    osi & gnn & 0.046 $\pm$ 0.010 & 0.216 $\pm$ 0.022 \\
+    osi & degree\_mlp & -0.015 $\pm$ 0.014 & -0.022 $\pm$ 0.007 \\
+    osi & mean\_null & -0.000 $\pm$ 0.000 & 0.000 $\pm$ 0.000 \\
+    pref\_ori (cos 2θ encoding) & features\_mlp & 0.054 $\pm$ 0.006 & 0.240 $\pm$ 0.011 \\
+    pref\_ori (cos 2θ encoding) & gnn & 0.035 $\pm$ 0.010 & 0.198 $\pm$ 0.016 \\
+    pref\_ori (cos 2θ encoding) & degree\_mlp & -0.001 $\pm$ 0.002 & 0.010 $\pm$ 0.031 \\
+    pref\_ori (cos 2θ encoding) & mean\_null & -0.001 $\pm$ 0.001 & 0.000 $\pm$ 0.000 \\
+    \bottomrule
+  \end{tabular}
+\end{table}

@@ -1,0 +1,20 @@
+{
+  "derived_from": "node_data_v1.pkl",
+  "source_url": "https://bossdb-open-data.s3.amazonaws.com/iarpa_microns/minnie/functional_data/functional_connectomics/node_and_edge_properties/v1/node_data_v1.pkl",
+  "source_sha256": "5a310585ccefcfb2f14d15b2cc2e607e730b0ec0a86587e606af362463abf6ef",
+  "derived_on": "2026-11-16",
+  "n_nodes": 12894,
+  "columns_used": [
+    "gosi_cvt_monet_full",
+    "osi_cvt_monet_full",
+    "pref_ori_cvt_monet_full",
+    "brain_area",
+    "layer"
+  ],
+  "histogram_bins": {
+    "gosi": 20,
+    "osi": 20,
+    "pref_ori": 18
+  },
+  "note": "Descriptive distributions of the committed benchmark dataset (issue #6, Figure 1); recomputed from the SHA-256-verified public release."
+}

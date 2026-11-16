@@ -1,0 +1,21 @@
+\begin{table}[htbp]
+  \centering
+  \caption{Dataset assembly and QC for the coregistered MICrONS functional-connectomics graph (benchmark v1).}
+  \label{tab:dataset}
+  \begin{tabular}{ll}
+    \toprule
+    Quantity & Value \\
+    \midrule
+    Neurons (nodes, EM↔2P coregistered) & 12,894 \\
+    Directed edges (n\_synapses >= 1) & 8,128 (of 1,693,276 raw pairs) \\
+    Mean in+out degree & $\approx$ 1.26 \\
+    Brain areas & AL, LM, RL, V1 \\
+    Layers & L2/3, L4, L5 \\
+    Median digital-twin performance (cc\_norm\_cvt) & 0.661 \\
+    Tuning labels (in-silico *\_cvt\_monet\_full) & gosi, osi, pref\_ori \\
+    Fraction of nodes with gosi label & 1.0 \\
+    Splits & 60/20/20 by nucleus ID, seed 0 \\
+    Release SHA-256 (node\_data\_v1.pkl) & 5a310585ccefcfb2… \\
+    \bottomrule
+  \end{tabular}
+\end{table}

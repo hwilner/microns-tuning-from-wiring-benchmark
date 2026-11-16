@@ -1,0 +1,14 @@
+\begin{table}[htbp]
+  \centering
+  \caption{Topology-null control: GNN on the real graph vs. the degree-preserving rewired null, with paired per-seed deltas.}
+  \label{tab:null}
+  \begin{tabular}{lllll}
+    \toprule
+    Property & GNN R² real (mean $\pm$ 95\% CI) & GNN R² rewired (mean $\pm$ 95\% CI) & Per-seed ΔR² & ΔR² (mean $\pm$ 95\% CI) \\
+    \midrule
+    gosi & 0.043 $\pm$ 0.007 & 0.042 $\pm$ 0.008 & seed 0: +0.0028, seed 1: +0.0056, seed 2: -0.0061 & 0.0008 $\pm$ 0.0070 \\
+    osi & 0.046 $\pm$ 0.010 & 0.048 $\pm$ 0.008 & seed 0: +0.0004, seed 1: -0.0058, seed 2: -0.0028 & -0.0027 $\pm$ 0.0035 \\
+    pref\_ori (cos 2θ encoding) & 0.035 $\pm$ 0.010 & 0.031 $\pm$ 0.011 & seed 0: +0.0036, seed 1: +0.0070, seed 2: +0.0010 & 0.0038 $\pm$ 0.0034 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
