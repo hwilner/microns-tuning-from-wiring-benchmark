@@ -89,11 +89,11 @@ def to_latex(frame: pd.DataFrame, caption: str, label: str) -> str:
         f"  \\label{{{label}}}",
         f"  \\begin{{tabular}}{{{spec}}}",
         "    \\toprule",
-        "    " + " & ".join(latex_escape(c) for c in cols) + " \\\",
+        "    " + " & ".join(latex_escape(c) for c in cols) + " \\\\",
         "    \\midrule",
     ]
     for _, row in frame.iterrows():
-        lines.append("    " + " & ".join(latex_escape(v) for v in row) + " \\\")
+        lines.append("    " + " & ".join(latex_escape(v) for v in row) + " \\\\")
     lines += ["    \\bottomrule", "  \\end{tabular}", "\\end{table}"]
     return "\n".join(lines) + "\n"
 
