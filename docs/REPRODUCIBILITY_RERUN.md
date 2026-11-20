@@ -1,1 +1,69 @@
-(SRC/"docs/REPRODUCIBILITY_RERUN.md").read_text()
+# Reproducibility re-run notes — Paper 1 results package
+
+Issue: #9 (reproducibility re-run of Paper 1 results). Verification only; no
+new analysis, no new numbers beyond re-measured ones.
+
+## 2026-11-20 — clean-checkout re-run (automation run)
+
+**Source.** Clean tarball of `main` via codeload.github.com (the sandbox
+cannot reach github.com directly); installed with `pip install -e ".[dev]"`.
+
+**Environment.** Python 3.12.12, CPU-only container (2 cores, 3 GB RAM),
+numpy 2.2.5, pandas 2.3.2, matplotlib 3.10.3, torch 2.8.0+cu128 — the same
+library versions as the 2026-11-16 validation row in `docs/RESULTS.md`
+Table 5.
+
+### What reproduced
+
+| Check | Command / method | Outcome |
+|---|---|---|
+| Data-free test suite | `python -m pytest -q` | **34 passed / 0 failed**, 16.5 s |
+| Paper tables | `python -m wiring_tuning.tables.make_all <clean copy>` | **12/12 files byte-identical** to the committed `reports/tables/` (CSV + MD + TeX, Tables 1–3) |
+| Paper figures | `python -m wiring_tuning.figures.make_all <clean copy>` | **2/2 SVGs byte-identical** to the committed `reports/figures/` |
+| Leaderboard internal consistency | re-derived mean/std/95% CI per (property, graph, model) from committed `reports/leaderboard.csv` | all **24 rows × 8 derived columns** match `leaderboard_summary.csv` exactly at the committed 4-decimal rounding |
+| Release checksums | compared `data/manifest.json` digests against `EXPECTED_SHA256` in `src/wiring_tuning/microns.py` | both release files match; `reports/leaderboard_meta.json` carries the same digests |
+| Synthetic determinism | `python -m wiring_tuning.benchmark` repeated; also at 1/2/4 torch threads | run-to-run **bit-identical** and thread-count independent on this machine |
+
+### Deviation recorded (does not change any conclusion)
+
+The synthetic positive control's GNN point value did **not** reproduce
+cross-machine: this run measured GNN R² = **0.222 ± 0.332** (mean ± std,
+seeds 0–2) on the planted graph vs. R² = 0.652 ± 0.200 recorded on
+2026-10-25, while every non-GNN number matched exactly (features_mlp 0.410
+on both graphs, rewired-null GNN −0.058, mean_null ≈ 0). The paired contrast
+that the control exists to demonstrate is unchanged: planted 0.222 vs.
+rewired −0.058, and the test-suite assertion (`gnn r2 > mean_null r2 + 0.3`,
+`pearson > 0.5` on the strong-signal synthetic) passes.
+
+Diagnosis: the synthetic run is deterministic per machine (bit-identical
+across repeated processes and across 1/2/4 threads) but **not bit-stable
+across machines** — float32 accumulation-order differences amplify
+chaotically over 150 epochs of GNN training, and the three-seed mean of a
+high-variance small-graph run (per-seed std 0.33) moves with them. The
+real-data leaderboard is protected against this by the `harness --check`
+tolerance (5e-3) and by deterministic kernels; the README/RESULTS synthetic
+point value (0.652) is a single-machine measurement and should be read as
+such. Recommendation for the scientific owner: quote the synthetic control
+as the paired planted-vs-rewired contrast (the pre-registered criterion),
+not the absolute R².
+
+### Deferred (explicitly)
+
+The full real-data `harness --check` (which re-derives the leaderboard from
+the public MICrONS release) was **attempted and deferred**: the sandbox
+network was throttled to ≲ 80 KB/s during this run (measured), so the
+~500 MB release download (`node_data_v1.pkl` + `edge_data_v1.pkl`) was not
+reachable within the run window. The download, SHA-256 verification, and
+leaderboard comparison therefore remain open for a runner with normal
+bandwidth; per the 2026-10-25 validation row they previously passed
+bit-for-bit. This is a resource limitation of the run environment, not a
+reproducibility failure.
+
+### Acceptance-criteria status for issue #9
+
+- [x] Clean-checkout re-run reproduces versioned figures and tables
+  (byte-identical, 14/14 artifacts).
+- [x] Re-run notes (environment, seeds, deviations) committed to `docs/`
+  (this file; seeds 0–2 throughout, split seed 0).
+- [ ] Full real-data leaderboard re-derivation (`harness --check`) —
+  **deferred** on bandwidth, see above.
