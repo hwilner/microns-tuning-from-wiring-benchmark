@@ -67,3 +67,56 @@ reproducibility failure.
   (this file; seeds 0–2 throughout, split seed 0).
 - [ ] Full real-data leaderboard re-derivation (`harness --check`) —
   **deferred** on bandwidth, see above.
+
+## 2026-11-25 — second clean-checkout verification (automation run)
+
+**Source.** Clean tarball of `main` at `696dfd2` via codeload.github.com;
+installed with `pip install -e . --no-deps` into the sandbox image.
+
+**Environment.** Python 3.12.12, CPU-only, numpy 2.2.5, pandas 2.3.2,
+matplotlib 3.10.3, torch 2.8.0+cu128 — identical library versions to the
+2026-11-20 run (same sandbox image).
+
+### What reproduced
+
+| Check | Outcome |
+|---|---|
+| Data-free test suite (`python -m pytest -q`) | **34 passed / 0 failed**, 21.3 s |
+| Paper tables + figures (`tables.make_all`, `figures.make_all` on the clean copy) | **14/14 regenerated artifacts byte-identical**; whole `reports/` tree identical to the committed snapshot (19/19 files) |
+| Leaderboard internal consistency | re-derived summary from `leaderboard.csv` via `summarize(results, keys=("property","graph","model"))` matches `leaderboard_summary.csv` exactly (24 rows, all derived columns, committed 4-decimal rounding) |
+
+### Synthetic positive control: environment-dependence confirmed
+
+A second sandbox re-run of the synthetic benchmark measured the planted-graph
+GNN at R² = **0.2223 ± 0.3319** (seeds 0–2) — **bit-identical to the
+2026-11-20 sandbox re-run** (0.222 ± 0.332) in the same library environment,
+and again far from the 0.652 ± 0.200 recorded 2026-10-25 on a different
+machine. Rewired-null GNN −0.0578 and all non-GNN values also match the
+2026-11-20 run exactly. This is the third data point and it pins the
+deviation down: the synthetic GNN point value is deterministic *within* an
+environment (same versions → same bits) but shifts *across* environments, so
+it must be quoted as the paired planted-vs-rewired contrast, per the
+2026-11-20 recommendation. No committed artifact is affected (the synthetic
+benchmark is a control, not a results-table input).
+
+### Real-data `harness --check`: attempted again, still bandwidth-deferred
+
+The release download was re-attempted with a resumable parallel
+range-request downloader (32 connections, 4 MB chunks, SHA-256 verification
+against `EXPECTED_SHA256`). Measured throughput: **~17 KB/s single-stream,
+~28–70 KB/s aggregate with 8–32 parallel connections** — the throttle is
+per-IP, so parallelism does not help. At these rates the 496 MB release
+(`node_data_v1.pkl` 295 MB + `edge_data_v1.pkl` 201 MB) needs an estimated
+**2–5 hours**, beyond the run window; the download was left running with
+resumable on-disk chunks so a later run can continue it, and is otherwise
+**explicitly deferred** again. This remains a resource limitation of the run
+environment, not a reproducibility failure: per the 2026-10-25 validation
+row the real-data check previously passed bit-for-bit.
+
+### Acceptance-criteria status for issue #9 (unchanged)
+
+- [x] Clean-checkout re-run reproduces versioned figures and tables —
+  reconfirmed byte-identical on a second independent run.
+- [x] Re-run notes committed to `docs/` (this file).
+- [ ] Full real-data leaderboard re-derivation (`harness --check`) —
+  **deferred** on bandwidth (second measurement recorded above).
